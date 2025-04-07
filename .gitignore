@@ -37,3 +37,7 @@ yarn-error.*
 *.tsbuildinfo
 
 .env.local
+
+# Build artifacts
+*.app/
+build-*/
