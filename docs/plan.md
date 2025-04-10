@@ -165,36 +165,37 @@ This document provides a step-by-step implementation plan for developing the Bea
 
 ### 2. Authentication Flow
 
-1. **Implement Supabase Client**
+1. **Implement Supabase Client** ✅
 
    - Create a utility file to initialize and export Supabase client
    - Set up secure storage for session persistence
 
-2. **Create Authentication Context**
+2. **Create Authentication Context** ✅
 
    - Implement a React Context for auth state
    - Add hooks for login, signup, logout functionality
+   - Add profile fetching and creation logic
 
-3. **Create Onboarding Screens**
+3. **Create Onboarding Screens** (Started)
 
    - Implement welcome/feature highlight screens
    - Add navigation between screens with progress indicators
 
-4. **Build Sign Up Flow**
+4. **Build Sign Up Flow** ✅
 
-   - Create the Sign Up form with validation
-   - Implement the Username creation form
+   - Create the Sign Up form with validation (Credentials & Terms)
+   - Implement the Username creation form (`CreateProfileScreen`)
    - Add error handling and loading states
 
-5. **Build Sign In Flow**
+5. **Build Sign In Flow** ✅
 
    - Create the Sign In form with validation
-   - Implement "Forgot Password" functionality
+   - Implement "Forgot Password" functionality (Placeholder added)
    - Configure redirect URLs for password reset (via Supabase dashboard)
    - Add error handling and loading states
 
-6. **Implement Auth Navigation**
-   - Create conditional navigation based on auth state
+6. **Implement Auth Navigation** ✅
+   - Create conditional navigation based on auth state and profile existence
    - Protect routes that require authentication
 
 ### 3. QA Checkpoint 1: Auth & Navigation

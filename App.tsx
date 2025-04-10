@@ -1,3 +1,5 @@
+import 'react-native-gesture-handler';
+console.log("--- Executing App.tsx ---");
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback } from 'react';
 import { View } from 'react-native';
@@ -7,6 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import CustomErrorBoundary from './src/components/CustomErrorBoundary';
 import { globalErrorHandler } from './src/utils/errorHandler';
 import ErrorFallback from './src/components/ErrorFallback';
+import { AuthProvider } from './src/context/AuthContext';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -47,12 +50,14 @@ function App() {
   }
 
   return (
-    <CustomErrorBoundary>
-      <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-        <AppNavigator />
-        <StatusBar style="auto" />
-      </View>
-    </CustomErrorBoundary>
+    <AuthProvider>
+      <CustomErrorBoundary>
+        <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+          <AppNavigator />
+          <StatusBar style="auto" />
+        </View>
+      </CustomErrorBoundary>
+    </AuthProvider>
   );
 }
 

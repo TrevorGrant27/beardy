@@ -10,5 +10,5 @@ export const theme = {
 
 // Export individual parts if needed directly
 export * from './colors';
-export * from './spacing';
+export { default as spacing } from './spacing'; // Correct way to re-export a default export
 export * from './typography'; // Export typography 
