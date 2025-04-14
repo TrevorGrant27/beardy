@@ -1,20 +1,21 @@
 console.log("--- Executing AppNavigator.tsx ---");
-import React from 'react';
-import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import React, { useState, useEffect } from 'react';
+import { NavigationContainer, DefaultTheme, useNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack'; // Import Stack Navigator
 import { ActivityIndicator, View, StyleSheet } from 'react-native'; // For loading state
-import { MaterialCommunityIcons } from '@expo/vector-icons'; // Import an icon set
+import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons'; // Import an icon set
 import { colors, typography } from '../theme'; // Import our defined colors and typography
 
 // Import Hooks & Context
 import { useAuth } from '../context/AuthContext'; // Import useAuth
 
 // Import screen components
-import ExploreScreen from '../screens/ExploreScreen';
 import FeedScreen from '../screens/FeedScreen';
 import AiVetScreen from '../screens/AiVetScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import CreatePostScreen from '../screens/CreatePostScreen'; // Keep CreatePostScreen import
+import PostDetailScreen from '../screens/PostDetailScreen'; // Add import for PostDetailScreen
 // Import Auth & Onboarding Screens
 import WelcomeScreen from '../screens/Onboarding/WelcomeScreen';
 import HighlightFeedScreen from '../screens/Onboarding/HighlightFeedScreen'; // Import
@@ -25,14 +26,17 @@ import SignUpScreen from '../screens/Auth/SignUpScreen';
 import SignInScreen from '../screens/Auth/SignInScreen';
 import CreateProfileScreen from '../screens/Auth/CreateProfileScreen'; // Import CreateProfileScreen
 import ForgotPasswordScreen from '../screens/Auth/ForgotPasswordScreen'; // Import ForgotPasswordScreen
-import ResetPasswordScreen from '../screens/Auth/ResetPasswordScreen'; // Import ResetPasswordScreen
+import ResetPasswordScreen from '../screens/Auth/ResetPasswordScreen'; // Correct path back to Auth subdirectory
+
 // Import Navigation Types - Assuming they are in the same file or separate
-import { AppTabParamList, AuthStackParamList } from './types';
+import { RootStackParamList, AuthStackParamList, TabParamList, MainAppStackParamList } from './types';
 import linkingConfig from './linkingConfig'; // Import linking config
 
 // Define Navigators
-const Tab = createBottomTabNavigator<AppTabParamList>();
-const Stack = createStackNavigator<AuthStackParamList>();
+const Tab = createBottomTabNavigator<TabParamList>();
+const AuthStack = createStackNavigator<AuthStackParamList>(); // Auth-specific stack
+const RootStack = createStackNavigator<RootStackParamList>(); // New Root stack
+const MainAppStack = createStackNavigator<MainAppStackParamList>(); // Create the Main App Stack
 
 // Create a custom theme based on React Navigation's DefaultTheme
 const appTheme = {
@@ -54,76 +58,82 @@ const appTheme = {
   // Let's set the header font via screenOptions for now.
 };
 
-// Auth Stack Component (Includes Onboarding)
+// Auth Stack Component (No ResetPassword here anymore)
 const AuthStackNavigator = () => (
-  <Stack.Navigator 
-     initialRouteName="Welcome" 
-     screenOptions={{ headerShown: false }}
-  >
-    {/* Onboarding Flow */}
-    <Stack.Screen name="Welcome" component={WelcomeScreen} />
-    <Stack.Screen name="HighlightFeed" component={HighlightFeedScreen} />
-    <Stack.Screen name="HighlightAiVet" component={HighlightAiVetScreen} />
-    <Stack.Screen name="HighlightExplore" component={HighlightExploreScreen} />
-    <Stack.Screen name="JoinPrompt" component={JoinPromptScreen} />
-    {/* Auth Actions */}
-    <Stack.Screen name="SignUp" component={SignUpScreen} />
-    <Stack.Screen name="SignIn" component={SignInScreen} />
-    <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-    <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} /> 
-  </Stack.Navigator>
+  <AuthStack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
+    <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
+    <AuthStack.Screen name="HighlightFeed" component={HighlightFeedScreen} />
+    <AuthStack.Screen name="HighlightAiVet" component={HighlightAiVetScreen} />
+    <AuthStack.Screen name="HighlightExplore" component={HighlightExploreScreen} />
+    <AuthStack.Screen name="JoinPrompt" component={JoinPromptScreen} />
+    <AuthStack.Screen name="SignUp" component={SignUpScreen} />
+    <AuthStack.Screen name="SignIn" component={SignInScreen} />
+    <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    {/* ResetPassword screen is now in RootStack */}
+  </AuthStack.Navigator>
 );
 
 // Main App Tabs Component (Existing Tab Navigator refactored)
-const MainAppTabNavigator = () => (
+const TabNavigator = () => (
   <Tab.Navigator
-    initialRouteName="Explore"
-    screenOptions={({ route }) => {
-      // Define options object explicitly
-      const options = {
-        // Tab Bar specific styling
-        tabBarActiveTintColor: colors.primary, // Basil Green for active
-        tabBarInactiveTintColor: colors.greyMedium,
-        tabBarStyle: {
-          backgroundColor: colors.white,
-          borderTopColor: colors.greyLight,
-          borderTopWidth: 1,
-        },
-        tabBarLabelStyle: { fontFamily: typography.fonts.body },
-
-        // Define icons based on route name
-        tabBarIcon: ({ focused, color, size }: { focused: boolean; color: string; size: number }) => {
-          let iconName: React.ComponentProps<typeof MaterialCommunityIcons>['name'] = 'help-circle-outline';
-
-          if (route.name === 'Explore') {
-            iconName = focused ? 'compass' : 'compass-outline';
-          } else if (route.name === 'Feed') {
-            iconName = focused ? 'newspaper-variant' : 'newspaper-variant-outline';
-          } else if (route.name === 'AiVet') {
-            iconName = focused ? 'robot-happy' : 'robot-happy-outline';
-          } else if (route.name === 'Settings') {
-            iconName = focused ? 'cog' : 'cog-outline';
-          }
-
-          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
-        },
-
-        // Header styling
-        headerStyle: { backgroundColor: colors.white },
-        headerTintColor: colors.textPrimary,
-        headerTitleStyle: {
-          fontFamily: typography.fonts.header,
-          fontSize: typography.fontSizes.h3,
-        },
-      };
-      return options; // Return the options object
-    }}
+    // initialRouteName="Feed" // Optional: explicitly set, but Feed is now first
+    screenOptions={({ route }) => ({
+      headerShown: false,
+      tabBarIcon: ({ focused, color, size }) => {
+        let iconName: keyof typeof Ionicons['glyphMap'] = 'help-circle-outline';
+        // Adjust icons based on remaining tabs
+        if (route.name === 'Feed') iconName = focused ? 'newspaper' : 'newspaper-outline';
+        else if (route.name === 'AIChat') iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
+        else if (route.name === 'Settings') iconName = focused ? 'settings' : 'settings-outline';
+        return <Ionicons name={iconName} size={size} color={color} />;
+      },
+      tabBarActiveTintColor: colors.primary,
+      tabBarInactiveTintColor: colors.greyMedium,
+    })}
   >
-    <Tab.Screen name="Explore" component={ExploreScreen} />
+    {/* <Tab.Screen name="Explore" component={ExploreScreen} /> // Remove Explore Tab.Screen */}
     <Tab.Screen name="Feed" component={FeedScreen} />
-    <Tab.Screen name="AiVet" component={AiVetScreen} options={{ title: 'AI Vet' }} />
+    <Tab.Screen name="AIChat" component={AiVetScreen} /> 
     <Tab.Screen name="Settings" component={SettingsScreen} />
   </Tab.Navigator>
+);
+
+// Main App Stack Navigator Component (New)
+const MainAppStackNavigator = () => (
+  <MainAppStack.Navigator
+    screenOptions={{
+      // Let's show headers for stack screens by default, hide for Tabs
+      // headerShown: false, 
+    }}
+    initialRouteName="MainTabs" // Explicitly start on Tabs
+  >
+    <MainAppStack.Screen 
+      name="MainTabs" 
+      component={TabNavigator} 
+      options={{ headerShown: false }} // Hide header specifically for the Tabs screen
+    />
+    {/* Removed Category/Resource Detail Screens */}
+    <MainAppStack.Screen 
+      name="CreatePost" 
+      component={CreatePostScreen} 
+      options={{ 
+        title: 'Create Post', 
+        headerShown: true // Show header for Create Post screen
+        // Consider adding presentation: 'modal' if desired
+        // presentation: 'modal', 
+      }} 
+    />
+    {/* Add PostDetail screen */}
+    <MainAppStack.Screen 
+      name="PostDetail" 
+      component={PostDetailScreen} 
+      options={{ 
+        title: 'Post', // Keep title generic or set dynamically later
+        headerShown: true 
+      }} 
+    />
+    {/* Add other screens like EditProfile here */}
+  </MainAppStack.Navigator>
 );
 
 // Loading Component (optional, for reuse)
@@ -133,42 +143,54 @@ const LoadingIndicator = () => (
   </View>
 );
 
-// Main App Navigator (Updated Conditional Logic & Linking)
+// Main App Navigator (Uses Root Stack)
 const AppNavigator = () => {
-  const { session, profile, loading, loadingProfile } = useAuth();
+  const { session, profile, loading: authLoading, loadingProfile } = useAuth();
+  const [initialRouteName, setInitialRouteName] = useState<keyof RootStackParamList | undefined>(undefined);
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
 
-  // Log state right before rendering decision
-  console.log("--- AppNavigator State ---");
-  console.log("loading:", loading);
-  console.log("loadingProfile:", loadingProfile);
-  console.log("session exists:", !!session);
-  console.log("profile exists:", !!profile);
-  // console.log("profile data:", profile); // Optional: log full profile
+  useEffect(() => {
+    if (!authLoading && !loadingProfile) { 
+      if (!session) {
+        setInitialRouteName('AuthStack');
+      } else if (!profile) {
+        setInitialRouteName('CreateProfile'); 
+      } else {
+        setInitialRouteName('MainAppStack');
+      }
+    } else {
+      setInitialRouteName(undefined);
+    }
+  }, [session, profile, authLoading, loadingProfile]);
 
-  // Initial auth check loading state
-  if (loading) {
-    return <LoadingIndicator />;
+  if (initialRouteName === undefined) { 
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
   }
 
   return (
-    // Pass linking config and fallback to NavigationContainer
-    <NavigationContainer theme={appTheme} linking={linkingConfig} fallback={<LoadingIndicator />}>
-      {session ? (
-        // User is authenticated
-        loadingProfile ? (
-          // Still loading profile
-          <LoadingIndicator />
-        ) : profile ? (
-          // Profile exists, show main app
-          <MainAppTabNavigator />
-        ) : (
-          // No profile, show profile creation
-          <CreateProfileScreen />
-        )
-      ) : (
-        // No session, show auth flow
-        <AuthStackNavigator />
-      )}
+    <NavigationContainer 
+        ref={navigationRef} 
+        theme={appTheme} 
+        linking={linkingConfig} 
+        fallback={<LoadingIndicator />}
+    >
+      <RootStack.Navigator 
+        initialRouteName={initialRouteName}
+        screenOptions={{ headerShown: false }}
+      >
+        <RootStack.Screen name="AuthStack" component={AuthStackNavigator} />
+        <RootStack.Screen name="MainAppStack" component={MainAppStackNavigator} />
+        <RootStack.Screen name="CreateProfile" component={CreateProfileScreen} />
+        <RootStack.Screen 
+          name="ResetPassword" 
+          component={ResetPasswordScreen} 
+          options={{ presentation: 'modal' }} 
+        />
+      </RootStack.Navigator>
     </NavigationContainer>
   );
 };

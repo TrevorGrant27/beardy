@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking';
 import { LinkingOptions } from '@react-navigation/native';
-import { RootStackParamList } from './types'; // Use the updated Root param list
+import { RootStackParamList } from './types'; // Use the Root param list with nested structure
 
 const prefix = Linking.createURL('/');
 
@@ -12,25 +12,37 @@ const linkingConfig: LinkingOptions<RootStackParamList> = {
   config: {
     // Configure screens at the root level
     screens: {
-      // Define paths for screens within the AuthStack navigator
-      AuthStack: {
-         screens: { // Screens within the AuthStack
-             ResetPassword: 'reset-password', // Maps prefix + 'reset-password'
-             // Add other explicit auth paths if needed:
-             // SignIn: 'sign-in' 
-             // ...etc
+      // Map paths to screens within the RootStack
+      // React Navigation will navigate to the correct navigator based on the screen name
+      AuthStack: { // Target the nested Auth navigator
+         path: 'auth', // Optional: Define path prefix, e.g., beardyapp://auth/welcome
+         screens: { 
+             // Screens accessible WITHOUT a session typically
+             Welcome: 'welcome',
+             HighlightFeed: 'highlight-feed',
+             HighlightAiVet: 'highlight-aivet',
+             HighlightExplore: 'highlight-explore',
+             JoinPrompt: 'join-prompt',
+             SignUp: 'sign-up',
+             SignIn: 'sign-in',
+             ForgotPassword: 'forgot-password',
+             // ResetPassword is now a root screen
          }
       },
-      // Define paths for screens within the MainApp navigator
-      MainApp: {
-         // path: 'app', // Optional path prefix for main app
-         screens: { // Screens within the MainApp
-            // Explore: 'explore', 
-            // Feed: 'feed',
-            // ...etc
+      MainApp: { // Target the nested Main app navigator
+         path: 'app', // Optional: e.g., beardyapp://app/explore
+         screens: { 
+            Explore: 'explore',
+            Feed: 'feed',
+            AiVet: 'ai-vet',
+            Settings: 'settings',
+            // Add nested stacks/screens if applicable
          }
       },
-      NotFound: '*' // Catch-all
+      // Screens directly within the RootStack
+      ResetPassword: 'reset-password', // Map beardyapp://reset-password directly to the root screen
+      CreateProfile: 'create-profile', // Optional: Allow linking directly if needed
+      NotFound: '*' 
     },
   },
 };

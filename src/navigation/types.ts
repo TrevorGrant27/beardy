@@ -14,15 +14,14 @@ export type AuthStackParamList = {
   SignUp: undefined; // No params expected for SignUp screen
   SignIn: undefined; // No params expected for SignIn screen
   ForgotPassword: undefined; // Added ForgotPassword route
-  ResetPassword: undefined; // Added ResetPassword route
-  // Add other auth-related screens here later (e.g., ResetPasswordForm)
+  // ResetPassword is moved to Root stack
 };
 
 // Type definitions for the main app bottom tab navigator
-export type AppTabParamList = {
-  Explore: undefined;
+export type TabParamList = {
+  // Explore: undefined; // Removed Explore tab
   Feed: undefined;
-  AiVet: undefined; // Or use a specific name like 'AIChat'
+  AIChat: undefined;
   Settings: undefined;
 };
 
@@ -31,8 +30,10 @@ export type AppTabParamList = {
 // Note: Screens rendered directly (like CreateProfileScreen) are not listed here
 export type RootStackParamList = {
   // Use NavigatorScreenParams to type nested navigators
-  AuthStack: NavigatorScreenParams<AuthStackParamList>; // Refers to the stack navigator itself
-  MainApp: NavigatorScreenParams<AppTabParamList>;      // Refers to the tab navigator itself
+  AuthStack: NavigatorScreenParams<AuthStackParamList>; // Navigator shown when logged out
+  MainAppStack: NavigatorScreenParams<MainAppStackParamList>; // Changed to MainAppStack
+  ResetPassword: { token: string } | undefined; // Can be undefined if opened not via deep link
+  CreateProfile: undefined; // Moved here: Shown after login if profile doesn't exist
   NotFound: undefined;           // Optional: For handling not found routes
 };
 
@@ -40,4 +41,14 @@ export type RootStackParamList = {
 // export type MainAppTabParamList = { ... };
 
 // And potentially combine them if needed for nested navigation
-// export type RootStackParamList = { ... }; 
+// export type RootStackParamList = { ... };
+
+// --- Main App Stack (Includes Tabs and other screens within the authenticated app) ---
+export type MainAppStackParamList = {
+  MainTabs: NavigatorScreenParams<TabParamList>; // The Bottom Tab Navigator
+  // Removed CategoryDetail
+  // Removed ResourceDetail
+  CreatePost: undefined; // Screen for creating a new post
+  PostDetail: { postId: string }; // Screen to show a single post and its comments
+  // Add other screens accessible after login, e.g., EditProfile etc.
+}; 

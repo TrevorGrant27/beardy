@@ -213,59 +213,7 @@ This document provides a step-by-step implementation plan for developing the Bea
    - Basic navigation between tabs (even if empty)
    - Check crash reporting for any unexpected errors.
 
-## Phase 3: Explore Tab (Resources Hub) Implementation (Week 2)
-
-### 1. Resource Data Management
-
-1. **Create Admin Tools** (separate from app, for content management)
-
-   - Simple form to add/edit resource categories
-   - Form to create/edit resource articles
-   - Upload functionality for resource images
-
-2. **Populate Initial Content**
-   - Add basic categories (Habitat, Diet, Health, Behavior)
-   - Create at least 2-3 articles per category for MVP
-
-### 2. Explore Tab UI
-
-1. **Implement Main Explore Screen**
-
-   - Create horizontal category lists
-   - Build resource card components
-   - Add "See All" functionality for categories
-
-2. **Implement Category Detail Screen**
-
-   - Display full vertical list of resources in a category
-   - Sort by display_order
-   - Handle empty state and loading
-
-3. **Implement Article Detail Screen**
-
-   - Display article content with proper formatting
-   - Support markdown or HTML in content
-   - Handle image display
-
-4. **Add Data Fetching**
-
-   - Connect UI to Supabase queries
-   - Implement caching for better performance
-   - Add loading and error states
-
-5. **Implement `FlatList` optimizations** for category/article lists.
-
-### 3. QA Checkpoint 2: Explore Tab
-
-1. **Build Local Production App:** (`eas build --local`)
-2. **Test on Simulator & Device:**
-   - Navigation within Explore tab (main -> category -> article -> back)
-   - Image loading performance and placeholders
-   - Content rendering and formatting
-   - Loading and error states for data fetching
-   - Check crash reporting.
-
-## Phase 4: Social Feed Implementation (Week 3)
+## Phase 3: Social Feed Implementation (Week 2)
 
 ### 1. Feed Core Functionality
 
@@ -307,7 +255,7 @@ This document provides a step-by-step implementation plan for developing the Bea
    - Add delete functionality for posts/comments
    - Create simple report mechanism
 
-### 3. QA Checkpoint 3: Social Feed
+### 3. QA Checkpoint 2: Social Feed
 
 1. **Build Local Production App:** (`eas build --local`)
 2. **Test on Simulator & Device:**
@@ -320,7 +268,7 @@ This document provides a step-by-step implementation plan for developing the Bea
    - Pull-to-refresh functionality
    - Check crash reporting.
 
-## Phase 5: AI Vet Chat Implementation (Week 3-4)
+## Phase 4: AI Vet Chat Implementation (Week 3)
 
 ### 1. Chat UI Implementation
 
@@ -354,7 +302,7 @@ This document provides a step-by-step implementation plan for developing the Bea
    - Disable input during processing
    - Ensure good UX during network delays
 
-### 3. QA Checkpoint 4: AI Vet
+### 3. QA Checkpoint 3: AI Vet
 
 1. **Build Local Production App:** (`eas build --local`)
 2. **Test on Simulator & Device:**
@@ -364,7 +312,7 @@ This document provides a step-by-step implementation plan for developing the Bea
    - Scrolling performance with long conversations
    - Check crash reporting.
 
-## Phase 6: Settings & Profile Management (Week 4)
+## Phase 5: Settings & Profile Management (Week 3-4)
 
 ### 1. Settings UI
 
@@ -385,7 +333,7 @@ This document provides a step-by-step implementation plan for developing the Bea
    - Implement Terms of Service and Privacy Policy screens
    - Add contact/feedback option
 
-### 2. QA Checkpoint 5: Settings
+### 2. QA Checkpoint 4: Settings
 
 1. **Build Local Production App:** (`eas build --local`)
 2. **Test on Simulator & Device:**
@@ -395,7 +343,7 @@ This document provides a step-by-step implementation plan for developing the Bea
    - Navigation to all support/legal pages
    - Check crash reporting.
 
-## Phase 7: End-to-End Testing & Refinement (Week 4-5)
+## Phase 6: End-to-End Testing & Refinement (Week 4)
 
 ### 1. Comprehensive Production Build Testing
 
@@ -416,9 +364,9 @@ This document provides a step-by-step implementation plan for developing the Bea
 2. **Performance Optimization:**
    - Profile app performance on devices using Xcode Instruments/Android Profiler if needed.
    - Optimize image loading, list rendering, and bundle size.
-3. **Iterate:** Perform additional TestFlight builds (QA Checkpoint 6, 7...) after significant fixes or refinements.
+3. **Iterate:** Perform additional TestFlight builds (QA Checkpoint 5, 6...) after significant fixes or refinements.
 
-## Phase 8: Deployment & Release Preparation (Week 5)
+## Phase 7: Deployment & Release Preparation (Week 4-5)
 
 ### 1. Prepare for App Store
 
@@ -456,10 +404,10 @@ This document provides a step-by-step implementation plan for developing the Bea
 ## Timeframe and Milestones
 
 - **Week 1**: Project setup, infrastructure, auth flow, QA Checkpoint 1
-- **Week 2**: Explore tab, begin Feed, QA Checkpoint 2
-- **Week 3**: Complete Feed, begin AI Vet, QA Checkpoint 3
-- **Week 4**: Complete AI Vet, Settings, QA Checkpoints 4 & 5, Begin End-to-End Testing
-- **Week 5**: Comprehensive Testing (TestFlight), Refinement, Deployment Prep
+- **Week 2**: Social Feed, begin AI Vet, QA Checkpoint 2
+- **Week 3**: Complete AI Vet, Settings, QA Checkpoint 3 & 4, Begin End-to-End Testing
+- **Week 4**: Comprehensive Testing (TestFlight), Refinement, Deployment Prep (QA 5+)
+- **Week 5**: (Buffer/Final Polish)
 
 ## Development Tips
 
