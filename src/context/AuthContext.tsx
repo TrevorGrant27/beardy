@@ -25,12 +25,14 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   loadingProfile: boolean;
+  needsOnboardingPrompt: boolean;
   signIn: (credentials: SignInWithPasswordCredentials) => Promise<{ error: AuthError | null }>;
   signUp: (credentials: SignUpWithPasswordCredentials) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
   createProfile: (username: string) => Promise<{ error: PostgrestError | null }>;
   requestPasswordReset: (email: string) => Promise<{ error: AuthError | null }>;
   updateUserPassword: (password: string) => Promise<{ error: AuthError | null }>;
+  clearOnboardingPrompt: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,6 +47,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [needsOnboardingPrompt, setNeedsOnboardingPrompt] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchInitialSession = async () => {
@@ -131,7 +134,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signIn = async (credentials: SignInWithPasswordCredentials) => {
     // Log the URL the client is configured with
     console.log("--- Attempting Sign In ---");
-    console.log("Supabase client URL:", supabase.auth. PENDING); // Check the configured URL
+    // console.log("Supabase client URL:", supabase.auth); // Removed .PENDING, maybe log whole object or just URL if needed
+    // It's better to get the URL from the imported env variable if needed:
+    // console.log("Supabase URL from env:", SUPABASE_URL);
     // Note: Don't log the anon key, even though it's public, just to be safe.
 
     setLoading(true);
@@ -211,7 +216,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           throw fetchError;
         }
         if (newProfileData) {
-          console.log("--- Re-fetched profile data: ---", newProfileData);
+          console.log("--- Setting needsOnboardingPrompt = true ---");
+          setNeedsOnboardingPrompt(true);
+          console.log("--- Re-fetched profile data, setting profile state: ---", newProfileData);
           setProfile(newProfileData as Profile);
         } else {
           console.log("--- Profile created but re-fetch returned null? ---");
@@ -225,6 +232,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log("--- Setting loadingProfile to false in createProfile finally block ---");
       setLoadingProfile(false);
     }
+    return { error: { message: 'An unexpected error occurred in createProfile', code: '500', details: '', hint: '' } };
   };
 
   const requestPasswordReset = async (email: string) => {
@@ -258,18 +266,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return { error };
   };
 
+  const clearOnboardingPrompt = () => {
+    console.log("--- Clearing onboarding prompt flag --- ");
+    setNeedsOnboardingPrompt(false);
+  };
+
   const value = {
     session,
     user,
     profile,
     loading,
     loadingProfile,
+    needsOnboardingPrompt,
     signIn,
     signUp,
     signOut,
     createProfile,
     requestPasswordReset,
     updateUserPassword,
+    clearOnboardingPrompt,
   };
 
   if (loading) {

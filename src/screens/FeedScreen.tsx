@@ -19,6 +19,11 @@ import { useAuth } from '../context/AuthContext'; // To potentially get current 
 import { useNavigation, useFocusEffect } from '@react-navigation/native'; // Import useNavigation and useFocusEffect
 import { StackNavigationProp } from '@react-navigation/stack'; // Import StackNavigationProp
 import { MainAppStackParamList } from '../navigation/types'; // Import MainAppStackParamList
+import dayjs from 'dayjs'; // Import dayjs
+import relativeTime from 'dayjs/plugin/relativeTime'; // Import relativeTime plugin
+
+// Extend dayjs with the plugin
+dayjs.extend(relativeTime);
 
 // Define the Post structure (including profile username)
 interface Post {
@@ -68,7 +73,7 @@ const FeedScreen = () => {
           content,
           image_url,
           created_at,
-          profiles ( username )
+          profiles ( username ) 
         `)
         .order('created_at', { ascending: false })
         .limit(20); // Limit initial fetch
@@ -77,13 +82,20 @@ const FeedScreen = () => {
         throw dbError;
       }
 
+      // --- LOG RAW DATA --- 
+      console.log("Raw Supabase data received:", JSON.stringify(data, null, 2)); 
+      if (data && data.length > 0) {
+          console.log("Profiles field for first post:", data[0].profiles);
+      }
+      // --- END LOG --- 
+
       if (data) {
-        // Map the data correctly, handling the profile array from Supabase join
+        // Map the data correctly - Supabase returns the joined profile as an object here
         const fetchedPosts = data.map(p => {
-          // Extract the first profile object if the array exists and is not empty
-          const profileData = (p.profiles && Array.isArray(p.profiles) && p.profiles.length > 0) 
-                              ? p.profiles[0] 
-                              : null;
+          // Directly assign the profiles object if it exists, otherwise null
+          const mappedProfile = p.profiles && typeof p.profiles === 'object' && !Array.isArray(p.profiles)
+                               ? { username: (p.profiles as any).username } // Access username, cast to any if TS complains
+                               : null;
 
           return {
             id: p.id,
@@ -91,8 +103,7 @@ const FeedScreen = () => {
             content: p.content,
             image_url: p.image_url,
             created_at: p.created_at,
-            // Assign the extracted single profile object (or null)
-            profiles: profileData ? { username: profileData.username } : null 
+            profiles: mappedProfile // Assign the correctly mapped profile object
           };
         }) as Post[]; // Type assertion remains
         
@@ -120,19 +131,19 @@ const FeedScreen = () => {
         let comments = 0;
         let liked = false;
 
-        // Fetch like count
-        const { data: countData, error: countError } = await supabase.rpc('get_post_like_count', { post_id: postId });
+        // Fetch like count - Use matching parameter name
+        const { data: countData, error: countError } = await supabase.rpc('get_post_like_count', { post_id_input: postId });
         if (countError) console.warn(`Error fetching like count for post ${postId}:`, countError.message);
         else if (typeof countData === 'number') likes = countData;
 
-        // Fetch comment count
-        const { data: commentCountData, error: commentCountError } = await supabase.rpc('get_post_comment_count', { post_id_input: postId }); // Use correct param name
+        // Fetch comment count - Param name 'post_id_input' should match the SQL function
+        const { data: commentCountData, error: commentCountError } = await supabase.rpc('get_post_comment_count', { post_id_input: postId });
         if (commentCountError) console.warn(`Error fetching comment count for post ${postId}:`, commentCountError.message);
         else if (typeof commentCountData === 'number') comments = commentCountData;
 
-        // Fetch user like status only if user is logged in
+        // Fetch user like status only if user is logged in - Use matching parameter names
         if (currentUserId) {
-            const { data: likedData, error: likedError } = await supabase.rpc('user_has_liked_post', { post_id: postId, user_id: currentUserId });
+            const { data: likedData, error: likedError } = await supabase.rpc('user_has_liked_post', { post_id_input: postId, user_id_input: currentUserId });
             if (likedError) console.warn(`Error fetching user like status for post ${postId}:`, likedError.message);
             else if (typeof likedData === 'boolean') liked = likedData;
         }
@@ -255,7 +266,7 @@ const FeedScreen = () => {
     }
   };
 
-  // Render individual post item (Updated for new state)
+  // Render individual post item
   const renderPost = ({ item }: { item: Post }) => {
     // Get stats from postStats state
     const stats = postStats[item.id] || { likes: 0, comments: 0, liked: false };
@@ -265,45 +276,53 @@ const FeedScreen = () => {
       navigation.navigate('PostDetail', { postId: item.id });
     };
 
+    // --- ADD LOG HERE ---
+    if (item.image_url) {
+      console.log(`Rendering post ${item.id} with image URL:`, item.image_url);
+    }
+    // --- END LOG --- 
+
     return (
       <TouchableOpacity onPress={goToPostDetail} activeOpacity={0.8} style={styles.postCard}>
-        {/* Post Header (Avatar + Username) */} 
-        <View style={styles.postHeader}> 
-             {/* TODO: Add Avatar Image */} 
-             <ThemedText weight="semiBold">{item.profiles?.username || 'Unknown User'}</ThemedText>
+        {/* Post Header */}
+        <View style={styles.postHeader}>
+          {/* TODO: Add Avatar Image */} 
+          <ThemedText weight="semiBold" style={styles.usernameText}>{item.profiles?.username || 'Unknown User'}</ThemedText>
         </View>
 
-        {/* Post Image (If exists) */}
+        {/* Post Image */} 
         {item.image_url && (
            <Image source={{ uri: item.image_url }} style={styles.postImage} resizeMode="cover" />
         )}
 
-        {/* Post Content (Text) */}
+        {/* Post Content */}
         {item.content && (
-             <ThemedText style={styles.postContent}>{item.content}</ThemedText>
+             <View style={styles.postContentContainer}> 
+                <ThemedText style={styles.postContentText}>{item.content}</ThemedText>
+             </View>
         )}
 
-        {/* Timestamp */}
-        <ThemedText variant="caption" color="textSecondary" style={styles.timestamp}>
-          {new Date(item.created_at).toLocaleString()}
-        </ThemedText>
+        {/* Timestamp Container (for alignment) */}
+        <View style={styles.timestampContainer}>
+            <ThemedText variant="caption" color="textSecondary" style={styles.timestampText}>
+                {dayjs(item.created_at).fromNow()}
+            </ThemedText>
+        </View>
         
-        {/* Post Actions */}
+        {/* Post Actions */} 
         <View style={styles.actionsContainer}>
-             {/* Like Button */}
+             {/* Like Button */} 
              <TouchableOpacity style={styles.actionButton} onPress={() => handleLikeToggle(item.id)}>
                  <Ionicons 
                    name={stats.liked ? 'heart' : 'heart-outline'} 
-                   size={24} 
+                   size={22} // Slightly smaller icon
                    color={stats.liked ? colors.error : colors.textSecondary} 
                  />
-                 {/* Display likes count */}
                  <ThemedText style={styles.actionText}>{stats.likes > 0 ? stats.likes : ''}</ThemedText>
              </TouchableOpacity>
-             {/* Comment Button */}
+             {/* Comment Button */} 
              <TouchableOpacity style={styles.actionButton} onPress={goToPostDetail}>
-                  <Ionicons name="chatbubble-outline" size={24} color={colors.textSecondary} />
-                  {/* Display comments count */}
+                  <Ionicons name="chatbubble-outline" size={22} color={colors.textSecondary} /> // Slightly smaller icon
                   <ThemedText style={styles.actionText}>{stats.comments > 0 ? stats.comments : ''}</ThemedText>
              </TouchableOpacity>
         </View>
@@ -352,12 +371,13 @@ const FeedScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  screenWrapperStyle: {
-    paddingHorizontal: spacing.md,
+  screenWrapperStyle: { 
+      // No padding here, padding handled by list container
   },
   listContainer: {
+    paddingHorizontal: spacing.md, // Add horizontal padding to the list itself
     paddingTop: spacing.sm,
-    paddingBottom: spacing.lg + 70,
+    paddingBottom: spacing.lg + 70, 
   },
   loadingIndicator: {
     flex: 1,
@@ -371,49 +391,65 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl * 2,
   },
   postCard: {
-    backgroundColor: colors.cardBackground, 
+    backgroundColor: colors.white, // Use white for cards
     borderRadius: 12,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg, // Increase space between cards
     borderWidth: 1,
     borderColor: colors.greyLight,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 }, // Slightly increase shadow offset
+    shadowOpacity: 0.08, // Slightly increase shadow opacity
+    shadowRadius: 4, // Slightly increase shadow radius
+    elevation: 3, // Adjust elevation for Android
   },
-  postHeader: {
+  postHeader: { 
       flexDirection: 'row',
       alignItems: 'center',
-      paddingTop: spacing.md,
-      paddingBottom: spacing.sm,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm, // Consistent vertical padding
+  },
+  usernameText: { // Style specifically for username
+      fontSize: 16, // Example size
   },
   postImage: {
-    width: '100%', // Take full width of card
-    aspectRatio: 16 / 9, // Or another desired ratio
+    width: '100%', 
+    aspectRatio: 16 / 9, 
+    backgroundColor: '#ff00ff', // Magenta - Add temporary background color
+    // No border radius needed if card clips content (add overflow: 'hidden' to postCard if needed)
   },
-  postContent: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
+  postContentContainer: { // Container for content text padding
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm, // Consistent vertical padding
   },
-  timestamp: {
-    paddingBottom: spacing.sm,
-    textAlign: 'right',
+  postContentText: { // Style for content text
+      fontSize: 15, // Example size
+      lineHeight: 21, // Improve readability
+  },
+  timestampContainer: { // Container for timestamp padding/alignment
+      paddingHorizontal: spacing.md,
+      paddingBottom: spacing.sm, // Consistent vertical padding
+      alignItems: 'flex-end', // Align timestamp to the right
+  },
+  timestampText: { // Style for timestamp text
+      fontSize: 12, // Make timestamp smaller
   },
   actionsContainer: {
     flexDirection: 'row',
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm, // Consistent vertical padding
     borderTopWidth: 1, 
     borderTopColor: colors.greyLight,
+    alignItems: 'center', // Vertically align items in action bar
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: spacing.lg,
+    marginRight: spacing.lg, 
+    paddingVertical: spacing.xs, // Add small vertical padding for touch area
   },
   actionText: {
-    marginLeft: spacing.xs,
+    marginLeft: spacing.xs + 2, // Slightly more space after icon
+    fontSize: 14, // Adjust size
     color: colors.textSecondary,
   },
   fab: {

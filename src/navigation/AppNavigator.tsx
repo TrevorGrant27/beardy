@@ -17,16 +17,13 @@ import SettingsScreen from '../screens/SettingsScreen';
 import CreatePostScreen from '../screens/CreatePostScreen'; // Keep CreatePostScreen import
 import PostDetailScreen from '../screens/PostDetailScreen'; // Add import for PostDetailScreen
 // Import Auth & Onboarding Screens
-import WelcomeScreen from '../screens/Onboarding/WelcomeScreen';
-import HighlightFeedScreen from '../screens/Onboarding/HighlightFeedScreen'; // Import
-import HighlightAiVetScreen from '../screens/Onboarding/HighlightAiVetScreen'; // Import
-import HighlightExploreScreen from '../screens/Onboarding/HighlightExploreScreen'; // Import
-import JoinPromptScreen from '../screens/Onboarding/JoinPromptScreen'; // Import
-import SignUpScreen from '../screens/Auth/SignUpScreen';
-import SignInScreen from '../screens/Auth/SignInScreen';
-import CreateProfileScreen from '../screens/Auth/CreateProfileScreen'; // Import CreateProfileScreen
-import ForgotPasswordScreen from '../screens/Auth/ForgotPasswordScreen'; // Import ForgotPasswordScreen
-import ResetPasswordScreen from '../screens/Auth/ResetPasswordScreen'; // Correct path back to Auth subdirectory
+import WelcomeScreen from '../screens/WelcomeScreen'; // Adjusted path if needed
+import SignInScreen from '../screens/Auth/SignInScreen'; // Adjusted path if needed
+import SignUpScreen from '../screens/Auth/SignUpScreen'; // Adjusted path if needed
+import ForgotPasswordScreen from '../screens/Auth/ForgotPasswordScreen'; // Keep if in AuthStack
+import CreateProfileScreen from '../screens/Auth/CreateProfileScreen'; // Keep in RootStack
+import ResetPasswordScreen from '../screens/Auth/ResetPasswordScreen'; // Keep in RootStack
+import SayHelloScreen from '../screens/SayHelloScreen'; // Import SayHelloScreen
 
 // Import Navigation Types - Assuming they are in the same file or separate
 import { RootStackParamList, AuthStackParamList, TabParamList, MainAppStackParamList } from './types';
@@ -58,18 +55,14 @@ const appTheme = {
   // Let's set the header font via screenOptions for now.
 };
 
-// Auth Stack Component (No ResetPassword here anymore)
+// Auth Stack Component (Simplified)
 const AuthStackNavigator = () => (
-  <AuthStack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
+  <AuthStack.Navigator screenOptions={{ headerShown: false }}>
     <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
-    <AuthStack.Screen name="HighlightFeed" component={HighlightFeedScreen} />
-    <AuthStack.Screen name="HighlightAiVet" component={HighlightAiVetScreen} />
-    <AuthStack.Screen name="HighlightExplore" component={HighlightExploreScreen} />
-    <AuthStack.Screen name="JoinPrompt" component={JoinPromptScreen} />
-    <AuthStack.Screen name="SignUp" component={SignUpScreen} />
     <AuthStack.Screen name="SignIn" component={SignInScreen} />
+    <AuthStack.Screen name="SignUp" component={SignUpScreen} />
     <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-    {/* ResetPassword screen is now in RootStack */}
+    {/* Remove other old onboarding screens if any were here */}
   </AuthStack.Navigator>
 );
 
@@ -145,23 +138,42 @@ const LoadingIndicator = () => (
 
 // Main App Navigator (Uses Root Stack)
 const AppNavigator = () => {
-  const { session, profile, loading: authLoading, loadingProfile } = useAuth();
+  const { session, profile, loading: authLoading, loadingProfile, needsOnboardingPrompt } = useAuth();
   const [initialRouteName, setInitialRouteName] = useState<keyof RootStackParamList | undefined>(undefined);
   const navigationRef = useNavigationContainerRef<RootStackParamList>();
 
   useEffect(() => {
-    if (!authLoading && !loadingProfile) { 
+    console.log("--- AppNavigator Effect Running ---");
+    console.log(`States: authLoading=${authLoading}, loadingProfile=${loadingProfile}, session=${!!session}, profile=${!!profile}, needsOnboardingPrompt=${needsOnboardingPrompt}`);
+
+    if (!authLoading) { 
       if (!session) {
+        console.log("--> Determining Route: AuthStack (no session)");
         setInitialRouteName('AuthStack');
-      } else if (!profile) {
-        setInitialRouteName('CreateProfile'); 
-      } else {
-        setInitialRouteName('MainAppStack');
+      } else { // Session exists
+          if (!loadingProfile) { // Only proceed if profile status is known
+              if (!profile) {
+                  console.log("--> Determining Route: CreateProfile (session, no profile)");
+                  setInitialRouteName('CreateProfile'); 
+              } else if (needsOnboardingPrompt) { // Profile exists, BUT needs prompt
+                  console.log("--> Determining Route: SayHello (session, profile, needs prompt)");
+                  setInitialRouteName('SayHello');
+              } else { // Profile exists and prompt not needed
+                  console.log("--> Determining Route: MainAppStack (session, profile, no prompt needed)");
+                  setInitialRouteName('MainAppStack');
+              }
+          } else {
+              // Session exists, but still loading profile - wait
+              console.log("--> Determining Route: Waiting (session, loading profile)");
+              setInitialRouteName(undefined); // Stay in loading state
+          }
       }
     } else {
-      setInitialRouteName(undefined);
+      // Still loading initial auth state - wait
+      console.log("--> Determining Route: Waiting (loading auth)");
+      setInitialRouteName(undefined); // Stay in loading state
     }
-  }, [session, profile, authLoading, loadingProfile]);
+  }, [session, profile, authLoading, loadingProfile, needsOnboardingPrompt]); // Add needsOnboardingPrompt dependency
 
   if (initialRouteName === undefined) { 
     return (
@@ -185,11 +197,8 @@ const AppNavigator = () => {
         <RootStack.Screen name="AuthStack" component={AuthStackNavigator} />
         <RootStack.Screen name="MainAppStack" component={MainAppStackNavigator} />
         <RootStack.Screen name="CreateProfile" component={CreateProfileScreen} />
-        <RootStack.Screen 
-          name="ResetPassword" 
-          component={ResetPasswordScreen} 
-          options={{ presentation: 'modal' }} 
-        />
+        <RootStack.Screen name="ResetPassword" component={ResetPasswordScreen} options={{ presentation: 'modal' }} />
+        <RootStack.Screen name="SayHello" component={SayHelloScreen} />
       </RootStack.Navigator>
     </NavigationContainer>
   );

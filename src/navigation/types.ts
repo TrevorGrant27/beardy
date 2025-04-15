@@ -4,17 +4,11 @@ import { NavigatorScreenParams } from '@react-navigation/native'; // Import Navi
 
 // Type definitions for the authentication flow stack navigator
 export type AuthStackParamList = {
-  Welcome: undefined; // No params expected for Welcome screen
-  // Onboarding Feature Highlights
-  HighlightFeed: undefined;
-  HighlightAiVet: undefined;
-  HighlightExplore: undefined;
-  JoinPrompt: undefined; // Final onboarding screen before auth actions
-  // Auth Actions
-  SignUp: undefined; // No params expected for SignUp screen
-  SignIn: undefined; // No params expected for SignIn screen
-  ForgotPassword: undefined; // Added ForgotPassword route
-  // ResetPassword is moved to Root stack
+  Welcome: undefined;
+  SignIn: undefined;
+  SignUp: undefined;
+  ForgotPassword: undefined; // Assuming ForgotPassword initiated from SignIn
+  // Remove any other old onboarding screens if they were listed here
 };
 
 // Type definitions for the main app bottom tab navigator
@@ -30,11 +24,12 @@ export type TabParamList = {
 // Note: Screens rendered directly (like CreateProfileScreen) are not listed here
 export type RootStackParamList = {
   // Use NavigatorScreenParams to type nested navigators
-  AuthStack: NavigatorScreenParams<AuthStackParamList>; // Navigator shown when logged out
-  MainAppStack: NavigatorScreenParams<MainAppStackParamList>; // Changed to MainAppStack
-  ResetPassword: { token: string } | undefined; // Can be undefined if opened not via deep link
-  CreateProfile: undefined; // Moved here: Shown after login if profile doesn't exist
-  NotFound: undefined;           // Optional: For handling not found routes
+  AuthStack: NavigatorScreenParams<AuthStackParamList>;
+  MainAppStack: NavigatorScreenParams<MainAppStackParamList>;
+  ResetPassword: { token: string } | undefined;
+  CreateProfile: undefined;
+  SayHello: undefined; // Add the new SayHello screen route
+  NotFound: undefined;
 };
 
 // You might also define types for your main app navigator (e.g., Bottom Tabs) here
