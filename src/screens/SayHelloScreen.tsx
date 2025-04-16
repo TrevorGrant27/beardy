@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import ScreenWrapper from '../components/ScreenWrapper';
@@ -46,15 +46,12 @@ const SayHelloScreen: React.FC<Props> = ({ navigation }) => {
         <Button 
             title="Post Something" 
             onPress={handlePost} 
-            style={styles.button}
-            // primary style?
+            style={[styles.button, styles.primaryButton]}
+            textStyle={styles.primaryButtonText}
         />
-        <Button 
-            title="Skip for Now" 
-            onPress={handleSkip} 
-            style={styles.button}
-            // secondary style?
-         />
+        <TouchableOpacity onPress={handleSkip} style={styles.skipButtonContainer}>
+            <ThemedText style={styles.skipButtonText}>Skip for now</ThemedText>
+         </TouchableOpacity>
       </View>
     </ScreenWrapper>
   );
@@ -84,6 +81,23 @@ const styles = StyleSheet.create({
   },
   button: {
     marginBottom: spacing.md,
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
+  },
+  primaryButtonText: {
+    color: colors.white,
+    fontSize: typography.fontSizes.md,
+    fontWeight: typography.fontWeights.bold as any,
+  },
+  skipButtonContainer: {
+      marginTop: spacing.sm,
+      alignSelf: 'center',
+  },
+  skipButtonText: {
+      fontSize: typography.fontSizes.sm,
+      color: colors.textSecondary,
+      textDecorationLine: 'underline',
   },
 });
 

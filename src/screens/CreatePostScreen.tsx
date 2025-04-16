@@ -3,18 +3,20 @@ import {
   View,
   StyleSheet,
   TextInput,
-  Button,
   Image,
   Alert,
   ScrollView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
 import ThemedText from '../components/ThemedText';
+import Button from '../components/Button';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { MainAppStackParamList } from '../navigation/types';
-import { colors, spacing } from '../theme';
+import { colors, spacing, typography } from '../theme';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase'; // Import Supabase client
 import { useAuth } from '../context/AuthContext'; // Import useAuth
@@ -182,7 +184,19 @@ const CreatePostScreen = () => {
           }
           console.log("Post insert successful.");
           Alert.alert("Success", "Your post has been published!");
-          navigation.goBack();
+          // Reset navigation stack to the Feed screen
+          navigation.reset({
+              index: 0,
+              routes: [
+                  { 
+                      name: 'MainAppStack', // Target the main stack
+                      params: { 
+                          screen: 'MainTabs', // Target the tab navigator within the main stack
+                          params: { screen: 'Feed' } // Target the Feed screen within the tabs
+                      } 
+                  } as any
+              ],
+          });
       } else {
            // This case should ideally be caught by the fetch error handling
            throw new Error("Image upload failed, post not created.");
@@ -197,29 +211,53 @@ const CreatePostScreen = () => {
   };
 
   return (
-    <ScreenWrapper>
-      <ScrollView contentContainerStyle={styles.container}>
-        <ThemedText variant="header" size="h2" style={styles.title}>Create New Post</ThemedText>
+    <ScreenWrapper withScrollView={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.container}>
+          <ThemedText variant="header" size="h2" style={styles.title}>Create New Post</ThemedText>
 
-        <TextInput
-          style={styles.textInput}
-          placeholder="What's happening with your beardie?"
-          placeholderTextColor={colors.greyMedium}
-          value={postText}
-          onChangeText={setPostText}
-          multiline
-        />
+          <TextInput
+            style={styles.textInput}
+            placeholder="What's happening with your beardie?"
+            placeholderTextColor={colors.textSecondary}
+            value={postText}
+            onChangeText={setPostText}
+            multiline
+          />
 
-        {selectedImage && (
-          <View style={styles.imagePreviewContainer}>
-            <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
-            <Button title="Remove Image" onPress={() => setSelectedImage(null)} color={colors.error} />
+          {selectedImage && (
+            <View style={styles.imagePreviewContainer}>
+              <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+              <TouchableOpacity 
+                style={styles.removeImageButton} 
+                onPress={() => setSelectedImage(null)}
+                disabled={isSubmitting}
+              >
+                <Ionicons name="close-circle" size={30} color={colors.error} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={styles.buttonContainer}>
+            <Button 
+              title="Add Photo" 
+              onPress={handleChoosePhoto} 
+              disabled={isSubmitting} 
+              style={[styles.actionButton, styles.secondaryButton]}
+              textStyle={styles.secondaryButtonText}
+            />
+            <View style={styles.spacer} />
+            <Button 
+              title={isSubmitting ? "Posting..." : "Post"} 
+              onPress={handleSubmitPost} 
+              disabled={isSubmitting}
+              style={[styles.actionButton, styles.primaryButton]}
+              textStyle={styles.primaryButtonText}
+            />
           </View>
-        )}
-
-        <View style={styles.buttonContainer}>
-          <Button title="Add Photo" onPress={handleChoosePhoto} disabled={isSubmitting} />
-          <Button title={isSubmitting ? "Posting..." : "Post"} onPress={handleSubmitPost} disabled={isSubmitting} />
         </View>
       </ScrollView>
     </ScreenWrapper>
@@ -227,40 +265,93 @@ const CreatePostScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  scrollContainer: {
     flexGrow: 1,
-    padding: spacing.md,
+  },
+  container: {
+    flex: 1,
+    padding: spacing.lg,
   },
   title: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
     textAlign: 'center',
   },
   textInput: {
-    minHeight: 100,
+    minHeight: 120,
+    backgroundColor: colors.white,
     borderColor: colors.greyLight,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: spacing.sm,
     padding: spacing.md,
     marginBottom: spacing.lg,
-    fontSize: 16, // Adjust as needed
+    fontSize: typography.fontSizes.md,
     color: colors.textPrimary,
-    textAlignVertical: 'top', // Align text to top for multiline
+    textAlignVertical: 'top',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.10,
+    shadowRadius: 1.41,
+    elevation: 2,
   },
   imagePreviewContainer: {
     alignItems: 'center',
     marginBottom: spacing.lg,
+    position: 'relative',
+    alignSelf: 'center',
+    maxWidth: '90%',
   },
   imagePreview: {
-    width: '100%',
-    height: 200, // Adjust height as needed
-    borderRadius: 8,
-    marginBottom: spacing.md,
-    resizeMode: 'cover',
+    width: 300,
+    height: 225,
+    borderRadius: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.greyLight,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -spacing.xs,
+    right: -spacing.xs,
+    backgroundColor: colors.white,
+    borderRadius: 15,
+    padding: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 3,
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     marginTop: spacing.md,
+    alignItems: 'center',
+  },
+  actionButton: {
+    flex: 1,
+  },
+  spacer: {
+    width: spacing.md,
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
+  },
+  primaryButtonText: {
+    color: colors.white,
+    fontSize: typography.fontSizes.md,
+    fontWeight: typography.fontWeights.bold as any,
+  },
+  secondaryButton: {
+    backgroundColor: colors.white,
+    borderColor: colors.primary,
+    borderWidth: 1,
+  },
+  secondaryButtonText: {
+    color: colors.primary,
+    fontSize: typography.fontSizes.md,
+    fontWeight: typography.fontWeights.bold as any,
   },
 });
 
