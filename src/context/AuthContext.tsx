@@ -14,7 +14,7 @@ import { supabase } from '../lib/supabase'; // Use relative path for now
 export interface Profile {
   id: string; // UUID, matches auth.users.id
   username: string;
-  // Add other profile fields as needed (e.g., avatar_url, full_name)
+  avatar_url?: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -33,6 +33,7 @@ interface AuthContextType {
   requestPasswordReset: (email: string) => Promise<{ error: AuthError | null }>;
   updateUserPassword: (password: string) => Promise<{ error: AuthError | null }>;
   clearOnboardingPrompt: () => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -102,10 +103,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoadingProfile(true);
 
     const fetchProfileForUser = async (userId: string) => {
+      console.log(`--->>> Fetching profile for user: ${userId}`);
       try {
         const { data, error, status } = await supabase
           .from('profiles')
-          .select('id, username, created_at, updated_at')
+          .select('id, username, created_at, updated_at, avatar_url')
           .eq('id', userId)
           .single();
 
@@ -130,6 +132,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     fetchProfileForUser(user.id);
   }, [user]);
+
+  // Function to manually trigger a profile refresh
+  const refreshProfile = async () => {
+    if (!user) {
+      console.log("refreshProfile: No user, skipping.");
+      return;
+    }
+    if (loadingProfile) {
+       console.log("refreshProfile: Already loading, skipping.");
+       return;
+    }
+    console.log(`refreshProfile: Triggering fetch for user ${user.id}`);
+    setLoadingProfile(true);
+    try {
+      const { data, error, status } = await supabase
+        .from('profiles')
+        .select('id, username, created_at, updated_at, avatar_url')
+        .eq('id', user.id)
+        .single();
+
+      if (error && status !== 406) {
+        console.error(`refreshProfile: Error fetching profile for ${user.id}:`, error.message);
+        setProfile(null);
+      } else if (data) {
+        console.log(`refreshProfile: Profile refreshed for ${user.id}:`, data.username);
+        setProfile(data as Profile);
+      } else {
+        console.log(`refreshProfile: No profile found for user ${user.id}`);
+        setProfile(null);
+      }
+    } catch (e) {
+      console.error(`refreshProfile: Unexpected error for ${user.id}:`, e);
+      setProfile(null);
+    } finally {
+      console.log(`refreshProfile: Setting loadingProfile false for user ${user.id}`);
+      setLoadingProfile(false);
+    }
+  };
 
   const signIn = async (credentials: SignInWithPasswordCredentials) => {
     // Log the URL the client is configured with
@@ -285,6 +325,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     requestPasswordReset,
     updateUserPassword,
     clearOnboardingPrompt,
+    refreshProfile,
   };
 
   if (loading) {

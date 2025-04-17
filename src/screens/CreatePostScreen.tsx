@@ -33,6 +33,7 @@ const getFileExtension = (uri: string): string => {
 
 const CreatePostScreen = () => {
   const navigation = useNavigation<CreatePostNavigationProp>();
+  const [postTitle, setPostTitle] = useState('');
   const [postText, setPostText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,8 +90,9 @@ const CreatePostScreen = () => {
       return;
     }
 
-    if (!postText && !selectedImage) {
-      Alert.alert("Empty Post", "Please add text or an image to your post.");
+    // Enforce DB constraint: Must have content OR image, even if title is present
+    if (!postText && !selectedImage) { 
+      Alert.alert("Missing Content", "Please add text or an image to your post, even if it has a title.");
       return;
     }
 
@@ -170,6 +172,7 @@ const CreatePostScreen = () => {
       if (uploadSuccessful || !selectedImage) {
           const postData = {
             user_id: user.id,
+            title: postTitle || null,
             content: postText || null,
             image_url: imageUrl,
           };
@@ -220,6 +223,15 @@ const CreatePostScreen = () => {
           <ThemedText variant="header" size="h2" style={styles.title}>Create New Post</ThemedText>
 
           <TextInput
+            style={styles.titleInput}
+            placeholder="Title"
+            placeholderTextColor={colors.textSecondary}
+            value={postTitle}
+            onChangeText={setPostTitle}
+            maxLength={150}
+          />
+
+          <TextInput
             style={styles.textInput}
             placeholder="What's happening with your beardie?"
             placeholderTextColor={colors.textSecondary}
@@ -255,7 +267,6 @@ const CreatePostScreen = () => {
               onPress={handleSubmitPost} 
               disabled={isSubmitting}
               style={[styles.actionButton, styles.primaryButton]}
-              textStyle={styles.primaryButtonText}
             />
           </View>
         </View>
@@ -275,6 +286,26 @@ const styles = StyleSheet.create({
   title: {
     marginBottom: spacing.xl,
     textAlign: 'center',
+  },
+  titleInput: {
+    height: 50,
+    backgroundColor: colors.white,
+    borderColor: colors.greyLight,
+    borderWidth: 1,
+    borderRadius: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    fontSize: typography.fontSizes.lg,
+    fontWeight: typography.fontWeights.medium as any,
+    color: colors.textPrimary,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.10,
+    shadowRadius: 1.41,
+    elevation: 2,
   },
   textInput: {
     minHeight: 120,

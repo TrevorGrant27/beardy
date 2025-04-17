@@ -12,23 +12,35 @@ import {
   Platform,
   Keyboard,
   Alert,
+  Pressable,
 } from 'react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { MainAppStackParamList } from '../navigation/types';
 import ScreenWrapper from '../components/ScreenWrapper';
 import ThemedText from '../components/ThemedText';
 import { supabase } from '../lib/supabase';
-import { colors, spacing } from '../theme';
+import { colors, spacing, typography } from '../theme';
 import { useAuth } from '../context/AuthContext';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Define interface for Post Details (can reuse/adapt Feed's Post if needed)
+// Extend dayjs with the plugin
+dayjs.extend(relativeTime);
+
+// Define interface for Post Details
 interface PostDetail {
   id: string;
   user_id: string;
+  title: string | null;
   content: string | null;
   image_url: string | null;
   created_at: string;
-  profiles: { username: string; } | null; // Expect profile to exist for a valid post
+  profiles: { 
+      username: string; 
+      avatar_url: string | null;
+  } | null;
 }
 
 // Define interface for Comments
@@ -41,6 +53,13 @@ interface Comment {
   profiles: { username: string; } | null; // Join profile for commenter username
 }
 
+// Define the structure for the stats state (copied from FeedScreen)
+interface PostStats {
+    likes: number;
+    comments: number;
+    liked: boolean;
+}
+
 // Define the route prop type
 type PostDetailScreenRouteProp = RouteProp<MainAppStackParamList, 'PostDetail'>;
 
@@ -48,6 +67,7 @@ const PostDetailScreen = () => {
   const route = useRoute<PostDetailScreenRouteProp>();
   const { postId } = route.params;
   const { user, profile } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [post, setPost] = useState<PostDetail | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -55,10 +75,47 @@ const PostDetailScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [newCommentText, setNewCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [postStats, setPostStats] = useState<PostStats>({ likes: 0, comments: 0, liked: false });
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  // --- Fetch Post Stats function (adapted from FeedScreen) ---
+  const fetchPostStats = async (postIdToFetch: string, currentUserId: string | undefined) => {
+    setLoadingStats(true);
+    console.log(`Fetching stats for single post: ${postIdToFetch}`);
+    try {
+      let likes = 0;
+      let comments = 0;
+      let liked = false;
+
+      // Use specific functions if available, otherwise adapt general ones
+      const { data: countData, error: countError } = await supabase.rpc('get_post_like_count', { post_id_input: postIdToFetch });
+      if (countError) console.warn(`Error fetching like count for post ${postIdToFetch}:`, countError.message);
+      else if (typeof countData === 'number') likes = countData;
+
+      const { data: commentCountData, error: commentCountError } = await supabase.rpc('get_post_comment_count', { post_id_input: postIdToFetch });
+      if (commentCountError) console.warn(`Error fetching comment count for post ${postIdToFetch}:`, commentCountError.message);
+      else if (typeof commentCountData === 'number') comments = commentCountData;
+
+      if (currentUserId) {
+          const { data: likedData, error: likedError } = await supabase.rpc('user_has_liked_post', { post_id_input: postIdToFetch, user_id_input: currentUserId });
+          if (likedError) console.warn(`Error fetching user like status for post ${postIdToFetch}:`, likedError.message);
+          else if (typeof likedData === 'boolean') liked = likedData;
+      }
+
+      setPostStats({ likes, comments, liked });
+      console.log("Fetched post stats:", { likes, comments, liked });
+    } catch (error: any) {
+      console.error("Error fetching post stats:", error);
+      // Optionally set an error state for stats
+    } finally {
+        setLoadingStats(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      setLoadingStats(true);
       setError(null);
       try {
         // --- Fetch Post Details --- 
@@ -67,23 +124,24 @@ const PostDetailScreen = () => {
           .select(`
             id,
             user_id,
+            title,
             content,
             image_url,
             created_at,
-            profiles ( username )
+            profiles ( username, avatar_url )
           `)
           .eq('id', postId)
-          .single(); // Use .single() as we expect only one post
+          .single();
 
         if (postError) throw new Error(`Failed to load post: ${postError.message}`);
         if (!postData) throw new Error('Post not found.');
         
-        // Handle profile mapping for post author
+        // Adjust profile mapping if needed (should be okay with single())
         const mappedPost = {
             ...postData,
             profiles: (postData.profiles && !Array.isArray(postData.profiles)) 
                       ? postData.profiles 
-                      : null // Adjust if profiles structure differs with .single()
+                      : null 
         } as PostDetail;
         setPost(mappedPost);
 
@@ -103,17 +161,19 @@ const PostDetailScreen = () => {
 
         if (commentsError) throw new Error(`Failed to load comments: ${commentsError.message}`);
         
-        // Handle profile mapping for comments
         const mappedComments = (commentsData || []).map(c => ({
           ...c,
           profiles: (c.profiles && !Array.isArray(c.profiles)) 
                     ? c.profiles 
-                    : null // Adjust if profiles structure differs
+                    : null 
         })) as Comment[];
         setComments(mappedComments);
 
+        // --- Fetch Post Stats (after main data is loaded) --- 
+        await fetchPostStats(postId, user?.id);
+
       } catch (err: any) {
-        console.error("Error fetching post details or comments:", err);
+        console.error("Error fetching post details/comments/stats:", err);
         setError(err.message || 'An error occurred.');
       } finally {
         setLoading(false);
@@ -124,7 +184,7 @@ const PostDetailScreen = () => {
       fetchData();
     }
 
-  }, [postId]); // Re-fetch if postId changes
+  }, [postId, user]);
 
   // --- Comment Submission Handler ---
   const handleCommentSubmit = async () => {
@@ -139,17 +199,17 @@ const PostDetailScreen = () => {
 
     setIsSubmittingComment(true);
     const commentContent = newCommentText.trim();
-    setNewCommentText(''); // Clear input immediately
+    setNewCommentText('');
     Keyboard.dismiss();
 
     // Optimistic Update data structure
     const optimisticComment: Comment = {
-      id: `temp-${Date.now()}`, // Temporary ID for key
+      id: `temp-${Date.now()}`,
       post_id: postId,
       user_id: user.id,
       content: commentContent,
-      created_at: new Date().toISOString(), // Current time
-      profiles: { username: profile.username }, // Use current user's profile
+      created_at: new Date().toISOString(),
+      profiles: { username: profile.username },
     };
 
     // Add to state optimistically
@@ -168,48 +228,61 @@ const PostDetailScreen = () => {
         throw insertError;
       }
       console.log("Comment submitted successfully");
-      // Optional: Could re-fetch comments here to get real ID/timestamp, 
-      // but optimistic update handles immediate UI.
-      // Consider removing the temp comment and adding the real one if needed.
-      // For now, the optimistic one stays.
+      // Increment comment count in stats state
+      setPostStats(prev => ({ ...prev, comments: prev.comments + 1 }));
 
     } catch (err: any) {
       console.error("Error submitting comment:", err);
       Alert.alert("Error", "Failed to submit comment. Please try again.");
       // Revert optimistic update
       setComments(currentComments => currentComments.filter(c => c.id !== optimisticComment.id));
-      setNewCommentText(commentContent); // Put text back in input
+      setNewCommentText(commentContent);
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+
+  // --- Like Toggle Handler (adapted from FeedScreen) ---
+  const handleLikeToggle = async () => {
+    if (!user) {
+      Alert.alert("Login Required", "You need to be logged in to like posts.");
+      return;
+    }
+    if (!post) return;
+
+    const currentlyLiked = postStats.liked;
+    const newLikedStatus = !currentlyLiked;
+    const newLikeCount = currentlyLiked ? postStats.likes - 1 : postStats.likes + 1;
+
+    // Optimistic UI Update
+    setPostStats(prev => ({ ...prev, likes: newLikeCount, liked: newLikedStatus }));
+
+    try {
+      if (newLikedStatus) {
+        const { error } = await supabase.from('likes').insert({ user_id: user.id, post_id: post.id });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('likes').delete().match({ user_id: user.id, post_id: post.id });
+        if (error) throw error;
+      }
+    } catch (error: any) {
+      console.error("Error toggling like:", error);
+      Alert.alert("Error", "Could not update like status.");
+      // Revert optimistic update on error
+      setPostStats(prev => ({ ...prev, likes: currentlyLiked ? newLikeCount + 1 : newLikeCount -1, liked: currentlyLiked }));
     }
   };
 
   // --- Render Functions ---
   const renderComment = ({ item }: { item: Comment }) => (
     <View style={styles.commentCard}>
-      <ThemedText weight="semiBold">{item.profiles?.username || 'Unknown User'}</ThemedText>
+      <View style={styles.commentHeader}>
+        <ThemedText style={styles.commentUsername}>{item.profiles?.username || 'User'}</ThemedText>
+        <ThemedText style={styles.commentTimestamp}>{dayjs(item.created_at).fromNow()}</ThemedText>
+      </View>
       <ThemedText style={styles.commentContent}>{item.content}</ThemedText>
-      <ThemedText variant="caption" color="textSecondary" style={styles.commentTimestamp}>
-        {new Date(item.created_at).toLocaleString()}
-      </ThemedText>
     </View>
   );
-
-  const renderHeader = () => {
-    if (!post) return null;
-    return (
-        <View style={styles.postContainer}>
-            <ThemedText weight="bold" size="lg">{post.profiles?.username || 'Unknown User'}</ThemedText>
-            {/* TODO: Avatar */} 
-            {post.image_url && <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover"/>}
-            {post.content && <ThemedText style={styles.postContent}>{post.content}</ThemedText>}
-            <ThemedText variant="caption" color="textSecondary" style={styles.timestamp}>
-                {new Date(post.created_at).toLocaleString()}
-            </ThemedText>
-             {/* TODO: Add Like/Comment actions for the main post? */}
-        </View>
-    );
-  };
 
   // --- Main Return ---
   if (loading) {
@@ -253,28 +326,82 @@ const PostDetailScreen = () => {
           data={comments}
           renderItem={renderComment}
           keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderHeader}
-          ListEmptyComponent={<ThemedText style={styles.noCommentsText}>No comments yet.</ThemedText>}
+          style={styles.list}
           contentContainerStyle={styles.listContentContainer}
+          ListHeaderComponent={() => (
+            <View style={styles.postContainer}>
+              <View style={styles.postAuthorHeader}>
+                <Image 
+                  source={post.profiles?.avatar_url ? { uri: post.profiles.avatar_url } : require('../../assets/images/default-avatar.png')}
+                  style={styles.avatarImage} 
+                />
+                <View style={styles.postAuthorInfo}>
+                  <ThemedText style={styles.postUsername}>{post.profiles?.username || 'User'}</ThemedText>
+                  <ThemedText style={styles.postTimestamp}>{dayjs(post.created_at).fromNow()}</ThemedText>
+                </View>
+              </View>
+
+              {post.title && (
+                <ThemedText style={styles.postTitle}>{post.title}</ThemedText>
+              )}
+
+              {post.content && (
+                <ThemedText style={styles.postContent}>{post.content}</ThemedText>
+              )}
+              
+              {post.image_url && (
+                <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover" />
+              )}
+
+              <View style={styles.actionsContainer}>
+                <Pressable style={styles.actionButton} onPress={handleLikeToggle} disabled={!user || loadingStats}>
+                  <Ionicons
+                    name={postStats.liked ? 'heart' : 'heart-outline'}
+                    size={24}
+                    color={postStats.liked ? colors.error : colors.textSecondary}
+                  />
+                  {postStats.likes > 0 && (
+                    <ThemedText style={styles.actionText}>{postStats.likes}</ThemedText>
+                  )}
+                </Pressable>
+                <Pressable style={styles.actionButton} onPress={() => { /* Maybe focus input? */ }}>
+                  <Ionicons name="chatbubble-outline" size={24} color={colors.textSecondary} />
+                  {postStats.comments > 0 && (
+                     <ThemedText style={styles.actionText}>{postStats.comments}</ThemedText>
+                  )}
+                </Pressable>
+              </View>
+
+              <ThemedText style={styles.commentsHeader}>Comments</ThemedText>
+            </View>
+          )}
+          ListEmptyComponent={() => (
+            !loading && (
+              <View style={styles.emptyContainer}>
+                <ThemedText style={styles.emptyText}>No comments yet.</ThemedText>
+              </View>
+            )
+          )}
         />
 
-        {/* Comment Input Area */}
-        <View style={styles.commentInputContainer}>
+        <View style={[styles.inputContainer, { paddingBottom: insets.bottom + spacing.sm }]}>
           <TextInput
-            style={styles.commentInput}
-            placeholder="Add a comment..."
-            placeholderTextColor={colors.greyMedium}
+            style={styles.textInput}
             value={newCommentText}
             onChangeText={setNewCommentText}
+            placeholder="Add a comment..."
+            placeholderTextColor={colors.textSecondary}
             multiline
-            editable={!isSubmittingComment} // Disable while submitting
           />
           <TouchableOpacity 
             style={[styles.sendButton, isSubmittingComment && styles.sendButtonDisabled]}
-            onPress={handleCommentSubmit} 
-            disabled={isSubmittingComment}
+            onPress={handleCommentSubmit}
+            disabled={isSubmittingComment || !newCommentText.trim()}
           >
-            <ThemedText weight="semiBold" style={styles.sendButtonText}>Send</ThemedText>
+            {isSubmittingComment ? 
+              <ActivityIndicator size="small" color={colors.white} /> :
+              <Ionicons name="send" size={20} color={colors.white} />
+            }
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -297,93 +424,155 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  list: {
+    flex: 1,
+    paddingBottom: spacing.md,
+  },
   listContentContainer: {
-    paddingBottom: spacing.lg,
-    flexGrow: 1,
+    paddingBottom: spacing.xl,
   },
   postContainer: {
     marginBottom: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.greyLight,
   },
-  postImage: {
-    width: '100%',
-    height: 250, // Adjust as needed
-    borderRadius: 8,
-    marginTop: spacing.md,
+  postAuthorHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+  },
+  avatarImage: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      marginRight: spacing.sm,
+      backgroundColor: colors.greyLight,
+  },
+  postAuthorInfo: {
+      flex: 1,
+  },
+  postUsername: {
+      fontSize: typography.fontSizes.md,
+      fontWeight: typography.fontWeights.semiBold,
+      color: colors.textPrimary,
+  },
+  postTimestamp: {
+      fontSize: typography.fontSizes.xs,
+      color: colors.textSecondary,
+  },
+  postTitle: {
+    fontSize: typography.fontSizes.h3,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.textPrimary,
     marginBottom: spacing.md,
   },
   postContent: {
-    fontSize: 16,
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-    lineHeight: 22, // Improve readability
+    fontSize: typography.fontSizes.md,
+    lineHeight: typography.fontSizes.md * 1.5,
+    color: colors.textPrimary,
+    marginBottom: spacing.lg,
   },
-  timestamp: {
-    textAlign: 'right',
-    marginTop: spacing.xs,
+  postImage: {
+    width: '100%',
+    aspectRatio: 16 / 9, 
+    borderRadius: spacing.sm,
+    marginBottom: spacing.md,
+    backgroundColor: colors.greyLight,
+  },
+  actionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: spacing.lg,
+  },
+  actionText: {
+    marginLeft: spacing.xs,
+    fontSize: typography.fontSizes.sm,
+    color: colors.textSecondary,
+    fontWeight: typography.fontWeights.medium,
+  },
+  commentsHeader: {
+      fontSize: typography.fontSizes.lg,
+      fontWeight: typography.fontWeights.bold,
+      color: colors.textPrimary,
+      marginTop: spacing.lg,
+      marginBottom: spacing.sm,
+      paddingHorizontal: spacing.md,
   },
   commentCard: {
-    backgroundColor: colors.background, // Slightly different background for comments?
+    backgroundColor: colors.background,
     paddingVertical: spacing.sm,
     marginBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.greyLight, // Separator for comments
+    borderBottomColor: colors.greyLight,
   },
-  commentContent: {
-      marginTop: spacing.xs,
+  commentHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.xs,
+  },
+  commentUsername: {
+      fontSize: typography.fontSizes.sm,
+      fontWeight: typography.fontWeights.semiBold,
+      color: colors.textPrimary,
   },
   commentTimestamp: {
-    textAlign: 'right',
-    marginTop: spacing.xs,
-  },
-  noCommentsText: {
-      textAlign: 'center',
-      marginTop: spacing.lg,
+      fontSize: typography.fontSizes.xs,
       color: colors.textSecondary,
   },
-  placeholderText: { // Style might be reused for error/empty states
-    marginTop: spacing.lg,
-    fontStyle: 'italic',
-    textAlign: 'center', // Center placeholder/error text
+  commentContent: {
+    fontSize: typography.fontSizes.md,
+    lineHeight: typography.fontSizes.md * 1.4,
+    color: colors.textPrimary,
   },
-  commentInputContainer: {
+  emptyContainer: {
+      padding: spacing.xl,
+      alignItems: 'center',
+      justifyContent: 'center',
+  },
+  emptyText: {
+      color: colors.textSecondary,
+      fontSize: typography.fontSizes.md,
+  },
+  inputContainer: {
     flexDirection: 'row',
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.greyLight,
-    backgroundColor: colors.background, // Match screen background
-    alignItems: 'center', // Align items vertically
+    backgroundColor: colors.background,
   },
-  commentInput: {
+  textInput: {
     flex: 1,
-    minHeight: 40, // Ensure decent tap area
-    maxHeight: 120, // Limit growth
-    backgroundColor: colors.white, // Or a slightly off-white
+    backgroundColor: colors.white,
+    borderColor: colors.greyLight,
+    borderWidth: 1,
     borderRadius: 20,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    marginRight: spacing.md,
-    borderColor: colors.greyMedium,
-    borderWidth: 1,
-    fontSize: 16,
-    color: colors.textPrimary,
+    fontSize: typography.fontSizes.md,
+    lineHeight: typography.fontSizes.md * 1.3,
+    maxHeight: 100,
+    marginRight: spacing.sm,
   },
   sendButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     borderRadius: 20,
+    padding: spacing.sm + 2,
+    marginLeft: spacing.xs,
     justifyContent: 'center',
     alignItems: 'center',
-    height: 40, // Match min input height
   },
   sendButtonDisabled: {
       backgroundColor: colors.greyMedium,
-  },
-  sendButtonText: {
-    color: colors.white,
   },
 });
 
