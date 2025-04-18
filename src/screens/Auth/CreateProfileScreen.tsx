@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert, ActivityIndicator, Pressable } from 'react-native';
 import { useAuth } from '../../context/AuthContext'; // Adjust path if needed
 import { colors, typography, spacing } from '../../theme'; // Import theme
+import { StackScreenProps } from '@react-navigation/stack'; // Import StackScreenProps
+import { OnboardingStackParamList } from '../../navigation/types'; // Import Onboarding params
 
-// No navigation props needed if this screen is shown conditionally by the navigator
+// Define the props for the screen, including navigation
+type Props = StackScreenProps<OnboardingStackParamList, 'CreateProfile'>;
 
-const CreateProfileScreen: React.FC = () => {
+const CreateProfileScreen: React.FC<Props> = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const { user, createProfile, loadingProfile, signOut } = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +41,8 @@ const CreateProfileScreen: React.FC = () => {
       // createProfile fetches and sets the new profile data on success.
       // The AppNavigator should then automatically switch to the MainAppTabNavigator.
       console.log('Profile created successfully for user:', user?.id);
-      // No navigation needed here; AppNavigator handles the switch.
+      // Navigate to the next step in the onboarding flow
+      navigation.navigate('AddBeardieInfo');
     }
   };
 
@@ -96,8 +100,9 @@ const CreateProfileScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    padding: spacing.lg, // Use theme spacing
+    justifyContent: 'flex-start',
+    padding: spacing.lg,
+    paddingTop: spacing.xl,
     backgroundColor: colors.background,
   },
   title: {

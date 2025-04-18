@@ -15,20 +15,24 @@ export type AuthStackParamList = {
 export type TabParamList = {
   // Explore: undefined; // Removed Explore tab
   Feed: undefined;
+  MyBeardie: undefined;
   AIChat: undefined;
-  Settings: undefined;
 };
 
-// Root navigator parameter list combining main navigators
-// Used for top-level navigation actions and linking config typing
-// Note: Screens rendered directly (like CreateProfileScreen) are not listed here
+// --- Onboarding Stack --- 
+export type OnboardingStackParamList = {
+    CreateProfile: undefined;
+    AddBeardieInfo: undefined;
+    SayHello: undefined;
+};
+
+// --- Root Stack --- 
 export type RootStackParamList = {
-  // Use NavigatorScreenParams to type nested navigators
   AuthStack: NavigatorScreenParams<AuthStackParamList>;
+  OnboardingStack: NavigatorScreenParams<OnboardingStackParamList>; // <-- Add Onboarding stack
   MainAppStack: NavigatorScreenParams<MainAppStackParamList>;
   ResetPassword: { token: string } | undefined;
-  CreateProfile: undefined;
-  SayHello: undefined; // Add the new SayHello screen route
+  AddBeardieInfo: undefined; // <-- Add AddBeardieInfo here for modal presentation
   NotFound: undefined;
 };
 
@@ -45,5 +49,6 @@ export type MainAppStackParamList = {
   // Removed ResourceDetail
   CreatePost: undefined; // Screen for creating a new post
   PostDetail: { postId: string }; // Screen to show a single post and its comments
+  Settings: undefined; // <-- Add this line
   // Add other screens accessible after login, e.g., EditProfile etc.
 }; 

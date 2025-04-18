@@ -60,9 +60,10 @@ const SayHelloScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     padding: spacing.lg,
+    paddingTop: spacing.xl,
   },
   title: {
     marginBottom: spacing.lg,

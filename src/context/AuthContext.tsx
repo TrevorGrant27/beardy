@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useContext,
   ReactNode,
+  useMemo,
 } from 'react';
 import { Session, User, AuthError, SignInWithPasswordCredentials, SignUpWithPasswordCredentials, PostgrestError } from '@supabase/supabase-js';
 import { View, ActivityIndicator } from 'react-native';
@@ -19,12 +20,26 @@ export interface Profile {
   updated_at?: string;
 }
 
+// Define the shape of the beardie data
+export interface Beardie {
+  id: string;
+  user_id: string;
+  name: string;
+  profile_photo_url?: string | null;
+  dob?: string | null;
+  sex?: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  beardie: Beardie | null;
   loading: boolean;
   loadingProfile: boolean;
+  loadingBeardie: boolean;
   needsOnboardingPrompt: boolean;
   signIn: (credentials: SignInWithPasswordCredentials) => Promise<{ error: AuthError | null }>;
   signUp: (credentials: SignUpWithPasswordCredentials) => Promise<{ error: AuthError | null }>;
@@ -34,6 +49,7 @@ interface AuthContextType {
   updateUserPassword: (password: string) => Promise<{ error: AuthError | null }>;
   clearOnboardingPrompt: () => void;
   refreshProfile: () => Promise<void>;
+  refreshBeardie: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,8 +62,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [beardie, setBeardie] = useState<Beardie | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  const [loadingBeardie, setLoadingBeardie] = useState(false);
   const [needsOnboardingPrompt, setNeedsOnboardingPrompt] = useState<boolean>(false);
 
   useEffect(() => {
@@ -71,6 +89,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(currentSession?.user ?? null);
       if (!currentSession) {
         setProfile(null);
+        setBeardie(null);
       }
       setLoading(false);
     });
@@ -85,6 +104,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (profile !== null) {
         console.log("--- useEffect[user]: Clearing profile state (no user) ---");
         setProfile(null);
+      }
+      if (beardie !== null) {
+        console.log("--- useEffect[user]: Clearing beardie state (no user) ---");
+        setBeardie(null);
       }
       return;
     }
@@ -114,16 +137,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (error && status !== 406) {
           console.error(`--- useEffect[user]: Error fetching profile for ${userId}: ---`, error.message);
           setProfile(null);
+          setBeardie(null);
         } else if (data) {
           console.log(`--- useEffect[user]: Profile fetched for ${userId}: ${data.username} ---`);
           setProfile(data as Profile);
+          fetchBeardieForUser(userId);
         } else {
           console.log(`--- useEffect[user]: No profile found for user ${userId} ---`);
           setProfile(null);
+          setBeardie(null);
         }
       } catch (e) {
         console.error(`--- useEffect[user]: Unexpected error fetching profile for ${userId}: ---`, e);
         setProfile(null);
+        setBeardie(null);
       } finally {
         console.log(`--- useEffect[user]: Setting loadingProfile false for user ${userId} ---`);
         setLoadingProfile(false);
@@ -155,20 +182,69 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (error && status !== 406) {
         console.error(`refreshProfile: Error fetching profile for ${user.id}:`, error.message);
         setProfile(null);
+        setBeardie(null);
       } else if (data) {
         console.log(`refreshProfile: Profile refreshed for ${user.id}:`, data.username);
         setProfile(data as Profile);
+        fetchBeardieForUser(user.id);
       } else {
         console.log(`refreshProfile: No profile found for user ${user.id}`);
         setProfile(null);
+        setBeardie(null);
       }
     } catch (e) {
       console.error(`refreshProfile: Unexpected error for ${user.id}:`, e);
       setProfile(null);
+      setBeardie(null);
     } finally {
       console.log(`refreshProfile: Setting loadingProfile false for user ${user.id}`);
       setLoadingProfile(false);
     }
+  };
+
+  // --- Fetch Beardie function (called after profile fetch or manually) ---
+  const fetchBeardieForUser = async (userId: string) => {
+    if (!userId) return; // Should always have userId here
+    console.log(`--->>> Fetching beardie for user: ${userId}`);
+    setLoadingBeardie(true);
+    try {
+      const { data, error } = await supabase
+        .from('beardies')
+        .select('*') // Select all beardie fields for now
+        .eq('user_id', userId)
+        .limit(1) // Fetch only the first beardie for now
+        .maybeSingle(); // Use maybeSingle in case user has no beardie
+
+      if (error) {
+        console.error(`--- fetchBeardieForUser: Error fetching beardie for ${userId}: ---`, error.message);
+        setBeardie(null);
+      } else if (data) {
+        console.log(`--- fetchBeardieForUser: Beardie found for ${userId}: ${data.name} ---`);
+        setBeardie(data as Beardie);
+      } else {
+        console.log(`--- fetchBeardieForUser: No beardie found for user ${userId} ---`);
+        setBeardie(null);
+      }
+    } catch (e) {
+      console.error(`--- fetchBeardieForUser: Unexpected error fetching beardie for ${userId}: ---`, e);
+      setBeardie(null);
+    } finally {
+      console.log(`--- fetchBeardieForUser: Setting loadingBeardie false for user ${userId} ---`);
+      setLoadingBeardie(false);
+    }
+  };
+
+  // Function to manually trigger beardie refresh
+  const refreshBeardie = async () => {
+    if (!user) {
+      console.log("refreshBeardie: No user, skipping.");
+      return;
+    }
+    if (loadingBeardie) {
+       console.log("refreshBeardie: Already loading, skipping.");
+       return;
+    }
+    await fetchBeardieForUser(user.id);
   };
 
   const signIn = async (credentials: SignInWithPasswordCredentials) => {
@@ -239,10 +315,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase.from('profiles').insert(profileData);
+      // Use upsert instead of insert to handle existing profiles gracefully
+      const { error } = await supabase.from('profiles').upsert(profileData, {
+        // If a row with the same 'id' exists, update it.
+        // If not, insert the new row.
+        onConflict: 'id' 
+      });
 
       if (error) {
-        console.error('Error creating profile:', error.message);
+        console.error('Error upserting profile:', error.message);
         throw error;
       } else {
         console.log("--- Profile inserted successfully, re-fetching... ---");
@@ -256,10 +337,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           throw fetchError;
         }
         if (newProfileData) {
-          console.log("--- Setting needsOnboardingPrompt = true ---");
-          setNeedsOnboardingPrompt(true);
           console.log("--- Re-fetched profile data, setting profile state: ---", newProfileData);
           setProfile(newProfileData as Profile);
+          await fetchBeardieForUser(user.id);
         } else {
           console.log("--- Profile created but re-fetch returned null? ---");
         }
@@ -311,22 +391,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setNeedsOnboardingPrompt(false);
   };
 
-  const value = {
-    session,
-    user,
-    profile,
-    loading,
-    loadingProfile,
-    needsOnboardingPrompt,
-    signIn,
-    signUp,
-    signOut,
-    createProfile,
-    requestPasswordReset,
-    updateUserPassword,
-    clearOnboardingPrompt,
-    refreshProfile,
-  };
+  const value = useMemo(
+    () => ({
+      session,
+      user,
+      profile,
+      beardie,
+      loading,
+      loadingProfile,
+      loadingBeardie,
+      needsOnboardingPrompt,
+      signIn,
+      signUp,
+      signOut,
+      createProfile,
+      requestPasswordReset,
+      updateUserPassword,
+      clearOnboardingPrompt,
+      refreshProfile,
+      refreshBeardie,
+    }),
+    [session, user, profile, beardie, loading, loadingProfile, loadingBeardie, needsOnboardingPrompt] 
+  );
 
   if (loading) {
     return (

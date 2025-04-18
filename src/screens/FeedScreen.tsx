@@ -58,6 +58,31 @@ interface PostStats {
 // Define navigation prop type
 type FeedScreenNavigationProp = StackNavigationProp<MainAppStackParamList, 'MainTabs'>;
 
+// --- Skeleton Component Definitions (Moved Before FeedScreen) ---
+// Use a temporary styles object here or ensure styles are defined below globally
+// Let's assume styles will be defined globally below for now.
+// We will reference styles.* later
+const SkeletonElement = ({ style }: { style?: any }) => <View style={[styles.skeletonBase, style]} />;
+
+const PostDetailSkeleton = () => (
+  <View style={styles.postContainerSkeleton}> 
+    <View style={styles.postHeader}> 
+      <SkeletonElement style={styles.avatarImage} /> 
+      <View style={styles.postHeaderTextContainer}> 
+        <SkeletonElement style={styles.skeletonUsernameLine} /> 
+        <SkeletonElement style={styles.skeletonTimestampLine} />
+      </View>
+    </View>
+    <SkeletonElement style={styles.skeletonTitle} /> 
+    <SkeletonElement style={styles.skeletonContentLine1} />
+    <SkeletonElement style={styles.skeletonContentLine2} /> 
+    <View style={styles.actionsContainerSkeleton}> 
+      <SkeletonElement style={styles.skeletonActionItem} /> 
+      <SkeletonElement style={styles.skeletonActionItem} />
+    </View>
+  </View>
+);
+
 const FeedScreen = () => {
   const navigation = useNavigation<FeedScreenNavigationProp>(); // Use typed navigation
   const [posts, setPosts] = useState<Post[]>([]);
@@ -253,6 +278,7 @@ const FeedScreen = () => {
   // Render individual post item
   const renderPost = ({ item }: { item: Post }) => {
     const stats = postStats[item.id] || { likes: 0, comments: 0, liked: false };
+    console.log(`Rendering Post ${item.id}, Stats:`, JSON.stringify(stats));
     
     const goToPostDetail = () => {
       navigation.navigate('PostDetail', { postId: item.id });
@@ -323,9 +349,9 @@ const FeedScreen = () => {
                 size={24}
                 color={stats.liked ? colors.error : colors.textSecondary}
               />
-              {/* Always render Text, conditionally render number inside */}
+              {/* Always render Text, explicitly convert number to string */}
               <ThemedText style={styles.actionText}>
-                {stats.likes > 0 ? stats.likes : ''} 
+                {stats.likes > 0 ? String(stats.likes) : ''} 
               </ThemedText>
             </Pressable>
 
@@ -339,9 +365,9 @@ const FeedScreen = () => {
               // No propagation logic needed with Pressable usually
             >
               <Ionicons name="chatbubble-outline" size={24} color={colors.textSecondary} />
-              {/* Always render Text, conditionally render number inside */}
+              {/* Always render Text, explicitly convert number to string */}
               <ThemedText style={styles.actionText}>
-                {stats.comments > 0 ? stats.comments : ''}
+                {stats.comments > 0 ? String(stats.comments) : ''}
               </ThemedText>
             </Pressable>
             {/* Add Share button etc. if needed */} 
@@ -370,10 +396,9 @@ const FeedScreen = () => {
 
   // --- Loading State (Initial Load) --- 
   if (loading && currentPage === 1) {
-    // Show skeleton loader for initial load only
+    // Restore skeleton loader now that components are defined first
     return (
        <ScreenWrapper withScrollView={false} style={styles.screenWrapperStyle}>
-          {/* Render multiple skeletons for initial view */}
           <PostDetailSkeleton /> 
           <PostDetailSkeleton />
           <PostDetailSkeleton />
@@ -431,34 +456,8 @@ const FeedScreen = () => {
   );
 };
 
-// --- Basic Skeleton Component Definitions (Copied from PostDetailScreen) ---
-const SkeletonElement = ({ style }: { style: any }) => <View style={[styles.skeletonBase, style]} />;
-
-const PostDetailSkeleton = () => (
-  <View style={styles.postContainerSkeleton}> {/* Use a slightly different style key */}
-    {/* Author Header Skeleton */}
-    <View style={styles.postHeader}>
-      <SkeletonElement style={styles.avatarImage} />
-      <View style={styles.postHeaderTextContainer}>
-        <SkeletonElement style={{ width: '60%', height: 16, marginBottom: 4 }} />
-        <SkeletonElement style={{ width: '40%', height: 12 }} />
-      </View>
-    </View>
-    {/* Title Skeleton */}
-    <SkeletonElement style={{ width: '80%', height: 24, marginBottom: spacing.md }} />
-    {/* Content Skeleton */}
-    <SkeletonElement style={{ width: '100%', height: 18, marginBottom: 6 }} />
-    <SkeletonElement style={{ width: '90%', height: 18, marginBottom: spacing.lg }} />
-    {/* Actions Skeleton */}
-    <View style={styles.actionsContainerSkeleton}> {/* Use a slightly different style key */}
-      <SkeletonElement style={{ width: 50, height: 24, marginRight: spacing.lg }} />
-      <SkeletonElement style={{ width: 50, height: 24 }} />
-    </View>
-  </View>
-);
-
-// Add styles needed for Skeleton
-const styles = StyleSheet.create({
+// --- Styles (Ensure skeleton styles are defined here) ---
+const styles = StyleSheet.create({ 
   screenWrapperStyle: { flex: 1 }, // Example existing
   list: { flex: 1 }, // Example existing
   listContentContainer: { paddingTop: spacing.sm, paddingBottom: spacing.lg + 70 }, // Example existing
@@ -484,22 +483,56 @@ const styles = StyleSheet.create({
   emptyText: { marginBottom: spacing.md, color: colors.textSecondary }, // Example existing
   // --- Skeleton Styles --- 
   skeletonBase: {
-      backgroundColor: colors.greyLight + 'A0', // Slightly transparent grey
+      backgroundColor: colors.greyLight + 'A0',
       borderRadius: 4,
   },
-  postContainerSkeleton: { // Style for the skeleton container
-      backgroundColor: colors.white, // Match card background maybe?
+  postContainerSkeleton: { 
+      backgroundColor: colors.white, 
       borderRadius: 12,
       padding: spacing.md,
       marginBottom: spacing.lg,
-      opacity: 0.7, // Make skeleton slightly transparent
+      opacity: 0.7, 
   },
-  actionsContainerSkeleton: { // Style for skeleton actions
+  skeletonUsernameLine: { 
+      width: '60%', 
+      height: 16, 
+      marginBottom: spacing.xs,
+  },
+  skeletonTimestampLine: {
+       width: '40%', 
+       height: 12, 
+  },
+  skeletonTitle: { 
+      width: '80%', 
+      height: 24, 
+      marginBottom: spacing.md,
+  }, 
+  skeletonContentLine1: {
+      width: '100%', 
+      height: 18, 
+      marginBottom: spacing.sm,
+  },
+  skeletonContentLine2: {
+       width: '90%', 
+       height: 18, 
+       marginBottom: spacing.lg,
+  },
+  actionsContainerSkeleton: { 
       flexDirection: 'row',
       marginTop: spacing.md, 
       borderTopWidth: 1,
       borderTopColor: colors.greyLight + '80',
       paddingTop: spacing.md,
+  },
+  skeletonActionItem: { 
+      width: 50, 
+      height: 24, 
+      marginRight: spacing.lg,
+  },
+  loadingContainer: { // Keep this in case needed elsewhere
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
   },
 });
 
