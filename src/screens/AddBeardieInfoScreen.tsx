@@ -11,6 +11,7 @@ import {
   Text,
   ActivityIndicator,
 } from 'react-native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import ScreenWrapper from '../components/ScreenWrapper';
 import ThemedText from '../components/ThemedText';
 import Button from '../components/Button';
@@ -28,16 +29,19 @@ const getFileExtension = (uri: string): string | null => {
   return match ? match[1] : null;
 };
 
+// Correct the type to use RootStackParamList as AddBeardieInfo is now in the RootStack
 type AddBeardieInfoScreenNavigationProp = StackNavigationProp<
-  RootStackParamList,
-  'AddBeardieInfo'
+  RootStackParamList, 
+  'AddBeardieInfo' 
 >;
 
-interface Props {
-  navigation: AddBeardieInfoScreenNavigationProp;
-}
+// Define the route prop type
+type AddBeardieInfoScreenRouteProp = RouteProp<RootStackParamList, 'AddBeardieInfo'>;
 
-const AddBeardieInfoScreen: React.FC<Props> = ({ navigation }) => {
+const AddBeardieInfoScreen: React.FC = () => {
+  // Get navigation and route using hooks
+  const navigation = useNavigation<AddBeardieInfoScreenNavigationProp>();
+  const route = useRoute<AddBeardieInfoScreenRouteProp>();
   const { user, refreshBeardie } = useAuth();
   const [name, setName] = useState('');
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
@@ -137,24 +141,36 @@ const AddBeardieInfoScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const navigateToNext = () => {
-    // Logic to determine next screen
-    // If called from onboarding, go to SayHello
-    // If called modally (e.g., from MyBeardie), just go back.
-    
-    // Check if we can go back (means it was pushed, likely modally)
-    if (navigation.canGoBack()) {
+    // Check the route parameter to determine navigation behavior
+    if (route.params?.presentedModally) {
         console.log("AddBeardieInfo: Going back (modal dismiss)");
         navigation.goBack();
     } else {
-        // Fallback for the original onboarding flow (replace current screen with SayHello)
+        // Assume onboarding flow: replace current screen with SayHello
         console.log("AddBeardieInfo: Replacing with SayHello (onboarding flow)");
-        navigation.replace('OnboardingStack', { screen: 'SayHello' }); // Navigate within the onboarding stack
+        // Navigate within the Onboarding stack
+        // We need to use getParent() to access the navigator containing OnboardingStack
+        // Or, more reliably, reset the root navigator *to* the correct place in OnboardingStack
+        // Let's try resetting the root navigator to the correct state:
+        navigation.getParent()?.reset({ // Use getParent() if available, otherwise direct reset might work
+             index: 0, // Resetting the Onboarding stack
+             routes: [
+                 { name: 'OnboardingStack', params: { screen: 'SayHello' } }
+             ]
+         });
+         // Alternative if getParent().reset doesn't work as expected:
+         // navigation.reset({ 
+         //     index: 0,
+         //     routes: [
+         //         { name: 'OnboardingStack', params: { screen: 'SayHello' } }
+         //     ]
+         // });
     }
   };
 
   const handleSkip = () => {
-      // Just navigate to the next step or go back
-      navigateToNext();
+    // Just navigate to the next step or go back
+    navigateToNext();
   };
 
   const isLoading = isSaving || isUploading;

@@ -1,36 +1,41 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../navigation/types';
+import { OnboardingStackParamList } from '../navigation/types';
 import ScreenWrapper from '../components/ScreenWrapper';
 import ThemedText from '../components/ThemedText';
 import Button from '../components/Button';
 import { colors, spacing, typography } from '../theme';
 import { useAuth } from '../context/AuthContext';
 
-type SayHelloScreenNavigationProp = StackNavigationProp<RootStackParamList, 'SayHello'>;
-
-interface Props {
-  navigation: SayHelloScreenNavigationProp;
-}
-
-const SayHelloScreen: React.FC<Props> = ({ navigation }) => {
+const SayHelloScreen: React.FC = () => {
   const { clearOnboardingPrompt } = useAuth();
+  // Use any-navigation to allow root-level routes
+  const navigation = useNavigation<any>();
+  // Acquire root navigator for modal/create-post and stack resets
+  const rootNav = navigation.getParent();
 
   const handlePost = () => {
-    console.log("SayHello: Navigating to CreatePost");
-    clearOnboardingPrompt();
-    navigation.navigate('MainAppStack', { screen: 'CreatePost' });
+    console.log("SayHello: navigating to CreatePost modal");
+    rootNav?.navigate('CreatePost');
   };
 
   const handleSkip = () => {
     console.log("SayHello: Skipping, navigating to Feed");
     clearOnboardingPrompt();
-    navigation.reset({
-        index: 0,
-        routes: [
-            { name: 'MainAppStack', params: { screen: 'MainTabs', params: { screen: 'Feed' } } }
-        ],
+    // Reset the root navigator to MainAppStack
+    rootNav?.reset({
+      index: 0,
+      routes: [
+        {
+          name: 'MainAppStack',
+          params: {
+            screen: 'MainTabs',
+            params: { screen: 'Feed' },
+          },
+        },
+      ],
     });
   };
 

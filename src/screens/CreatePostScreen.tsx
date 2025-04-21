@@ -33,12 +33,12 @@ const getFileExtension = (uri: string): string => {
 
 const CreatePostScreen = () => {
   const navigation = useNavigation<CreatePostNavigationProp>();
+  const { user, clearOnboardingPrompt } = useAuth(); // Get user and clear onboarding prompt
   const [postTitle, setPostTitle] = useState('');
   const [postText, setPostText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mediaLibraryPermission, setMediaLibraryPermission] = useState<ImagePicker.PermissionStatus | null>(null);
-  const { user } = useAuth(); // Get user from context
 
   useEffect(() => {
     (async () => {
@@ -186,20 +186,15 @@ const CreatePostScreen = () => {
             throw new Error(`Database Error: ${insertError.message}`);
           }
           console.log("Post insert successful.");
-          Alert.alert("Success", "Your post has been published!");
-          // Reset navigation stack to the Feed screen
-          navigation.reset({
-              index: 0,
-              routes: [
-                  { 
-                      name: 'MainAppStack', // Target the main stack
-                      params: { 
-                          screen: 'MainTabs', // Target the tab navigator within the main stack
-                          params: { screen: 'Feed' } // Target the Feed screen within the tabs
-                      } 
-                  } as any
-              ],
-          });
+          // Show success alert and clear onboarding prompt when user confirms
+          Alert.alert(
+            "Success", 
+            "Your post has been published!", 
+            [
+              { text: 'OK', onPress: () => clearOnboardingPrompt() }
+            ],
+            { cancelable: false }
+          );
       } else {
            // This case should ideally be caught by the fetch error handling
            throw new Error("Image upload failed, post not created.");

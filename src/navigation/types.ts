@@ -32,8 +32,9 @@ export type RootStackParamList = {
   OnboardingStack: NavigatorScreenParams<OnboardingStackParamList>; // <-- Add Onboarding stack
   MainAppStack: NavigatorScreenParams<MainAppStackParamList>;
   ResetPassword: { token: string } | undefined;
-  AddBeardieInfo: undefined; // <-- Add AddBeardieInfo here for modal presentation
-  NotFound: undefined;
+  AddBeardieInfo: { presentedModally?: boolean } | undefined;
+  CreatePost: undefined; // <-- Add CreatePost here for modal presentation
+  NotFound: undefined; // Optional: For handling unknown routes
 };
 
 // You might also define types for your main app navigator (e.g., Bottom Tabs) here
@@ -45,9 +46,6 @@ export type RootStackParamList = {
 // --- Main App Stack (Includes Tabs and other screens within the authenticated app) ---
 export type MainAppStackParamList = {
   MainTabs: NavigatorScreenParams<TabParamList>; // The Bottom Tab Navigator
-  // Removed CategoryDetail
-  // Removed ResourceDetail
-  CreatePost: undefined; // Screen for creating a new post
   PostDetail: { postId: string }; // Screen to show a single post and its comments
   Settings: undefined; // <-- Add this line
   // Add other screens accessible after login, e.g., EditProfile etc.

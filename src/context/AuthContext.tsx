@@ -337,6 +337,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           throw fetchError;
         }
         if (newProfileData) {
+          console.log("--- Setting needsOnboardingPrompt = true ---");
+          setNeedsOnboardingPrompt(true);
           console.log("--- Re-fetched profile data, setting profile state: ---", newProfileData);
           setProfile(newProfileData as Profile);
           await fetchBeardieForUser(user.id);

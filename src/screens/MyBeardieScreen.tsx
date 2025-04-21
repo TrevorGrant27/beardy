@@ -16,7 +16,8 @@ const MyBeardieScreen = () => {
   const navigation = useNavigation<MyBeardieNavigationProp>();
 
   const handleAddBeardie = () => {
-    navigation.navigate('AddBeardieInfo');
+    console.log("MyBeardieScreen: Navigating to AddBeardieInfo modally");
+    navigation.navigate('AddBeardieInfo', { presentedModally: true });
   };
 
   if (loadingBeardie) {

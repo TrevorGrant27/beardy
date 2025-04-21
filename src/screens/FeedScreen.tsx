@@ -37,6 +37,7 @@ interface Post {
   content: string | null;
   image_url: string | null;
   created_at: string;
+  // flair_text?: string | null; // <-- Remove flair text field
   // Include profile data fetched via join
   profiles: {
     username: string;
@@ -311,12 +312,11 @@ const FeedScreen = () => {
             </View>
           </View>
 
-          {/* Post Title */} 
+          {/* Post Title (restored) */} 
           {item.title && (
-            // No need for separate TouchableOpacity if main area is tappable
             <ThemedText style={styles.postTitle}>{item.title}</ThemedText>
           )}
-
+          
           {/* Post Content Snippet */} 
           {item.content && (
             <ThemedText 
@@ -421,7 +421,8 @@ const FeedScreen = () => {
 
   // --- Main Return --- 
   return (
-    <ScreenWrapper withScrollView={false}>
+    // Tell ScreenWrapper NOT to apply top safe area inset, as header handles it
+    <ScreenWrapper withScrollView={false} safeAreaEdges={['right', 'left']}>
       <FlatList
         data={posts}
         renderItem={renderPost}
@@ -460,7 +461,9 @@ const FeedScreen = () => {
 const styles = StyleSheet.create({ 
   screenWrapperStyle: { flex: 1 }, // Example existing
   list: { flex: 1 }, // Example existing
-  listContentContainer: { paddingTop: spacing.sm, paddingBottom: spacing.lg + 70 }, // Example existing
+  listContentContainer: { 
+      paddingBottom: spacing.lg + 70 
+  }, 
   postOuterContainer: { marginBottom: spacing.lg }, // Example existing
   postTouchableArea: { backgroundColor: colors.cardBackground, borderRadius: 12, padding: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3, borderWidth: Platform.OS === 'ios' ? 0 : 1, borderColor: colors.greyLight }, // Example existing
   postHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }, // Example existing
@@ -468,7 +471,13 @@ const styles = StyleSheet.create({
   postHeaderTextContainer: { flex: 1 }, // Example existing
   postUsername: { fontSize: typography.fontSizes.md, fontWeight: typography.fontWeights.semiBold as any, color: colors.textPrimary }, // Example existing
   postTimestamp: { fontSize: typography.fontSizes.xs, color: colors.textSecondary }, // Example existing
-  postTitle: { fontSize: typography.fontSizes.lg, fontWeight: typography.fontWeights.bold as any, color: colors.textPrimary, marginBottom: spacing.sm, marginTop: spacing.xs }, // Example existing
+  postTitle: { // Restore original title style (or adjust if needed)
+      fontSize: typography.fontSizes.lg, 
+      fontWeight: typography.fontWeights.bold as any, 
+      color: colors.textPrimary, 
+      marginBottom: spacing.sm, // Restore bottom margin
+      marginTop: spacing.xs, // Keep top margin
+  }, 
   postContent: { fontSize: typography.fontSizes.md, lineHeight: typography.fontSizes.md * 1.4, color: colors.textSecondary, marginBottom: spacing.md }, // Example existing
   postImage: { width: '100%', aspectRatio: 16 / 9, borderRadius: spacing.sm, marginBottom: spacing.md, backgroundColor: colors.greyLight }, // Example existing
   actionsContainer: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.greyLight, paddingTop: spacing.md }, // Example existing
