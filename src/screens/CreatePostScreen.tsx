@@ -13,9 +13,9 @@ import ScreenWrapper from '../components/ScreenWrapper';
 import ThemedText from '../components/ThemedText';
 import Button from '../components/Button';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { MainAppStackParamList } from '../navigation/types';
+import { MainAppStackParamList, RootStackParamList } from '../navigation/types';
 import { colors, spacing, typography } from '../theme';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase'; // Import Supabase client
@@ -23,7 +23,11 @@ import { useAuth } from '../context/AuthContext'; // Import useAuth
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env'; // Import Supabase creds from env
 import { Session } from '@supabase/supabase-js'; // Import Session type
 
-type CreatePostNavigationProp = StackNavigationProp<MainAppStackParamList, 'CreatePost'>;
+// Correct the Navigation Prop type to use RootStackParamList as CreatePost is a root modal
+type CreatePostNavigationProp = StackNavigationProp<RootStackParamList, 'CreatePost'>;
+
+// Define the Route Prop type using RootStackParamList
+type CreatePostRouteProp = RouteProp<RootStackParamList, 'CreatePost'>;
 
 // Helper function to extract file extension (simplified)
 const getFileExtension = (uri: string): string => {
@@ -33,12 +37,25 @@ const getFileExtension = (uri: string): string => {
 
 const CreatePostScreen = () => {
   const navigation = useNavigation<CreatePostNavigationProp>();
+  const route = useRoute<CreatePostRouteProp>();
   const { user, clearOnboardingPrompt } = useAuth(); // Get user and clear onboarding prompt
   const [postTitle, setPostTitle] = useState('');
   const [postText, setPostText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mediaLibraryPermission, setMediaLibraryPermission] = useState<ImagePicker.PermissionStatus | null>(null);
+
+  // Effect to clear onboarding prompt if navigated with the param
+  useEffect(() => {
+    if (route.params?.clearOnboarding) {
+      console.log("CreatePostScreen: Received clearOnboarding param, clearing prompt.");
+      clearOnboardingPrompt();
+      // Optional: It might be good practice to clear the param afterwards,
+      // but it requires the navigation prop to have access to RootStackParamList
+      // or careful type handling. Let's skip for now to avoid complexity.
+      // Example: navigation.getParent()?.setParams({ clearOnboarding: undefined });
+    }
+  }, [route.params?.clearOnboarding, clearOnboardingPrompt]);
 
   useEffect(() => {
     (async () => {

@@ -336,6 +336,7 @@ const PostDetailScreen = () => {
                   style={styles.avatarImage} 
                 />
                 <View style={styles.postAuthorInfo}>
+                  <ThemedText style={styles.postedByLabel}>Posted by: </ThemedText>
                   <ThemedText style={styles.postUsername}>{post.profiles?.username || 'User'}</ThemedText>
                   <ThemedText style={styles.postTimestamp}>{dayjs(post.created_at).fromNow()}</ThemedText>
                 </View>
@@ -449,7 +450,13 @@ const styles = StyleSheet.create({
       backgroundColor: colors.greyLight,
   },
   postAuthorInfo: {
-      flex: 1,
+    flex: 1,
+  },
+  postedByLabel: {
+    fontSize: typography.fontSizes.sm,
+    color: colors.textSecondary,
+    fontWeight: typography.fontWeights.normal as any,
+    marginRight: spacing.xs,
   },
   postUsername: {
       fontSize: typography.fontSizes.md,

@@ -24,7 +24,6 @@ import SignUpScreen from '../screens/Auth/SignUpScreen'; // Adjusted path if nee
 import ForgotPasswordScreen from '../screens/Auth/ForgotPasswordScreen'; // Keep if in AuthStack
 import CreateProfileScreen from '../screens/Auth/CreateProfileScreen'; // Keep in RootStack
 import ResetPasswordScreen from '../screens/Auth/ResetPasswordScreen'; // Keep in RootStack
-import SayHelloScreen from '../screens/SayHelloScreen'; // Import SayHelloScreen
 import AddBeardieInfoScreen from '../screens/AddBeardieInfoScreen'; // <-- Import new screen
 
 // Import Custom Components
@@ -85,7 +84,6 @@ const OnboardingStackNavigator = () => (
   >
     <OnboardingStack.Screen name="CreateProfile" component={CreateProfileScreen} />
     <OnboardingStack.Screen name="AddBeardieInfo" component={AddBeardieInfoScreen} />
-    <OnboardingStack.Screen name="SayHello" component={SayHelloScreen} />
   </OnboardingStack.Navigator>
 );
 
@@ -149,17 +147,16 @@ const MainAppStackNavigator = () => (
         headerShown: true // Show header for Settings screen itself
       }} 
     />
-    {/* --- Restore CreatePost screen --- */}
-    {/*
+    {/* Add PostDetail screen to the Main App Stack */}
     <MainAppStack.Screen 
       name="PostDetail" 
       component={PostDetailScreen} 
       options={{ 
         title: 'Post', 
-        headerShown: true 
+        headerShown: true, 
+        headerBackTitle: 'Back'
       }} 
     />
-    */}
   </MainAppStack.Navigator>
 );
 
@@ -274,7 +271,12 @@ const AppNavigator = () => {
         <RootStack.Screen 
             name="CreatePost" 
             component={CreatePostScreen} 
-            options={{ presentation: 'modal', title: 'Create Post', headerShown: true }}
+            options={{ 
+                presentation: 'modal', 
+                title: 'Create Post', 
+                headerShown: true, 
+                headerBackTitle: 'Back'
+            }}
         />
       </RootStack.Navigator>
     </NavigationContainer>

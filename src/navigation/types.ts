@@ -23,7 +23,6 @@ export type TabParamList = {
 export type OnboardingStackParamList = {
     CreateProfile: undefined;
     AddBeardieInfo: undefined;
-    SayHello: undefined;
 };
 
 // --- Root Stack --- 
@@ -33,7 +32,7 @@ export type RootStackParamList = {
   MainAppStack: NavigatorScreenParams<MainAppStackParamList>;
   ResetPassword: { token: string } | undefined;
   AddBeardieInfo: { presentedModally?: boolean } | undefined;
-  CreatePost: undefined; // <-- Add CreatePost here for modal presentation
+  CreatePost: { clearOnboarding?: boolean } | undefined; // Allow passing param to clear onboarding state
   NotFound: undefined; // Optional: For handling unknown routes
 };
 

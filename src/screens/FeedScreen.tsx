@@ -20,7 +20,8 @@ import { colors, spacing, typography } from '../theme';
 import { useAuth } from '../context/AuthContext'; // To potentially get current user for interactions
 import { useNavigation, useFocusEffect } from '@react-navigation/native'; // Import useNavigation and useFocusEffect
 import { StackNavigationProp } from '@react-navigation/stack'; // Import StackNavigationProp
-import { MainAppStackParamList } from '../navigation/types'; // Import MainAppStackParamList
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { MainAppStackParamList, TabParamList, RootStackParamList } from '../navigation/types';
 import dayjs from 'dayjs'; // Import dayjs
 import relativeTime from 'dayjs/plugin/relativeTime'; // Import relativeTime plugin
 
@@ -56,8 +57,8 @@ interface PostStats {
     liked: boolean;
 }
 
-// Define navigation prop type
-type FeedScreenNavigationProp = StackNavigationProp<MainAppStackParamList, 'MainTabs'>;
+// Define navigation prop type specific to FeedScreen within the TabNavigator
+type FeedScreenNavigationProp = BottomTabNavigationProp<TabParamList, 'Feed'>;
 
 // --- Skeleton Component Definitions (Moved Before FeedScreen) ---
 // Use a temporary styles object here or ensure styles are defined below globally
@@ -85,7 +86,7 @@ const PostDetailSkeleton = () => (
 );
 
 const FeedScreen = () => {
-  const navigation = useNavigation<FeedScreenNavigationProp>(); // Use typed navigation
+  const navigation = useNavigation<FeedScreenNavigationProp>(); // Use the specific Tab navigator type
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true); // Initial load
   const [loadingMore, setLoadingMore] = useState(false); // Loading next page
@@ -282,7 +283,12 @@ const FeedScreen = () => {
     console.log(`Rendering Post ${item.id}, Stats:`, JSON.stringify(stats));
     
     const goToPostDetail = () => {
-      navigation.navigate('PostDetail', { postId: item.id });
+      // Navigate via root stack: specify MainAppStack then nested PostDetail screen
+      const rootNav = navigation.getParent()?.getParent();
+      rootNav?.navigate('MainAppStack', {
+        screen: 'PostDetail',
+        params: { postId: item.id },
+      });
     };
 
     return (
@@ -389,9 +395,8 @@ const FeedScreen = () => {
 
   // --- Handle Create Post Navigation ---
   const handleCreatePost = () => {
-    // navigation.navigate('MainAppStack', { screen: 'CreatePost' });
-    // Navigate directly to the screen within the current MainAppStack
-    navigation.navigate('CreatePost'); 
+    // Explicitly get grandparent (RootStack) navigator to navigate to the CreatePost modal
+    navigation.getParent()?.getParent<StackNavigationProp<RootStackParamList>>()?.navigate('CreatePost');
   };
 
   // --- Loading State (Initial Load) --- 

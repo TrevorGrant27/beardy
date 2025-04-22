@@ -21,7 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList, OnboardingStackParamList } from '../navigation/types';
+import { RootStackParamList } from '../navigation/types';
 
 // Helper (reuse or move to utils)
 const getFileExtension = (uri: string): string | null => {
@@ -42,7 +42,7 @@ const AddBeardieInfoScreen: React.FC = () => {
   // Get navigation and route using hooks
   const navigation = useNavigation<AddBeardieInfoScreenNavigationProp>();
   const route = useRoute<AddBeardieInfoScreenRouteProp>();
-  const { user, refreshBeardie } = useAuth();
+  const { user, refreshBeardie, clearOnboardingPrompt } = useAuth();
   const [name, setName] = useState('');
   const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -141,30 +141,29 @@ const AddBeardieInfoScreen: React.FC = () => {
   };
 
   const navigateToNext = () => {
+    // Get the root navigator to perform the reset
+    const rootNav = navigation.getParent() as StackNavigationProp<RootStackParamList> | undefined;
+
     // Check the route parameter to determine navigation behavior
     if (route.params?.presentedModally) {
         console.log("AddBeardieInfo: Going back (modal dismiss)");
         navigation.goBack();
     } else {
-        // Assume onboarding flow: replace current screen with SayHello
-        console.log("AddBeardieInfo: Replacing with SayHello (onboarding flow)");
-        // Navigate within the Onboarding stack
-        // We need to use getParent() to access the navigator containing OnboardingStack
-        // Or, more reliably, reset the root navigator *to* the correct place in OnboardingStack
-        // Let's try resetting the root navigator to the correct state:
-        navigation.getParent()?.reset({ // Use getParent() if available, otherwise direct reset might work
-             index: 0, // Resetting the Onboarding stack
-             routes: [
-                 { name: 'OnboardingStack', params: { screen: 'SayHello' } }
-             ]
-         });
-         // Alternative if getParent().reset doesn't work as expected:
-         // navigation.reset({ 
-         //     index: 0,
-         //     routes: [
-         //         { name: 'OnboardingStack', params: { screen: 'SayHello' } }
-         //     ]
-         // });
+        // Onboarding flow: Clear the prompt and reset to the main app (Feed screen)
+        console.log("AddBeardieInfo: Onboarding complete. Clearing prompt and resetting to MainAppStack/Feed.");
+        clearOnboardingPrompt(); // Mark onboarding as complete
+        rootNav?.reset({ 
+            index: 0,
+            routes: [
+                { 
+                    name: 'MainAppStack', 
+                    params: { 
+                        screen: 'MainTabs', 
+                        params: { screen: 'Feed' } 
+                    } 
+                }
+            ]
+        });
     }
   };
 
